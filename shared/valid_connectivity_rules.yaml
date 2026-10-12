@@ -1,0 +1,224 @@
+# validator/connectivity/rules.yaml
+version: 1
+description: >
+  Connectivity rules for Aspen blocks. The validator checks block port->stream
+  connections by probing node existence under:
+  \Data\Blocks\{BLOCK}\Ports\{PORT}\{STREAM}
+
+# ------------------------------------------------------------
+# How to read connections
+# ------------------------------------------------------------
+connection_probe:
+  stream_list_path: "\\Data\\Streams"        # used to enumerate candidate stream names
+  block_list_path: "\\Data\\Blocks"          # used to enumerate block names if blocks not provided
+  block_type_path: "\\Data\\Flowsheet\\Section\\GLOBAL\\Input\\BLKTYPE\\{block}"
+  port_root_path: "\\Data\\Blocks\\{block}\\Ports\\{port}"
+  port_stream_path: "\\Data\\Blocks\\{block}\\Ports\\{port}\\{stream}"
+
+# ------------------------------------------------------------
+# Port candidates by BLKTYPE
+# (Because Ports enumeration is unreliable, we only probe these ports.)
+# ------------------------------------------------------------
+port_candidates:
+  FLASH2: ["F(IN)", "V(OUT)", "L(OUT)"]
+  HEATER: ["F(IN)", "P(OUT)"]
+  MHEATX: ["HF(IN)", "CF(IN)", "HP(OUT)", "CP(OUT)"]
+  MIXER:  ["F(IN)", "P(OUT)"]
+  RSTOIC: ["F(IN)", "P(OUT)"]
+  RGIBBS: ["F(IN)", "P(OUT)"]
+  RPLUG:  ["F(IN)", "P(OUT)"]
+  PUMP:   ["F(IN)", "P(OUT)"]
+  COMPR:  ["F(IN)", "P(OUT)"]
+  COMPRESSOR: ["F(IN)", "P(OUT)"]
+
+# ------------------------------------------------------------
+# Rules per BLKTYPE
+# rule types:
+# - count_min: require >= N connections on a port
+# - count_exact: require exactly N connections on a port
+# - count_equal: require counts of two ports are equal
+# - note: just metadata (kept in results)
+# ------------------------------------------------------------
+rules:
+
+  MIXER:
+    - type: count_min
+      id: MIXER_feed_min
+      port: "F(IN)"
+      min: 1
+      message: "MIXER requires at least 1 inlet stream."
+
+    - type: count_exact
+      id: MIXER_product_exact
+      port: "P(OUT)"
+      exact: 1
+      message: "MIXER requires exactly 1 outlet stream."
+
+  FLASH2:
+    - type: count_min
+      id: FLASH2_feed_min
+      port: "F(IN)"
+      min: 1
+      message: "FLASH2 requires at least 1 feed stream on F(IN)."
+
+    - type: count_exact
+      id: FLASH2_vapor_exact
+      port: "V(OUT)"
+      exact: 1
+      message: "FLASH2 requires exactly 1 vapor outlet stream on V(OUT)."
+
+    - type: count_exact
+      id: FLASH2_liquid_exact
+      port: "L(OUT)"
+      exact: 1
+      message: "FLASH2 requires exactly 1 liquid outlet stream on L(OUT)."
+
+  HEATER:
+    - type: count_min
+      id: HEATER_feed_min
+      port: "F(IN)"
+      min: 1
+      message: "HEATER requires at least 1 feed stream on F(IN)."
+
+    - type: count_exact
+      id: HEATER_product_exact
+      port: "P(OUT)"
+      exact: 1
+      message: "HEATER requires exactly 1 product stream on P(OUT)."
+
+  MHEATX:
+    - type: count_min
+      id: MHEATX_cold_feed_min
+      port: "CF(IN)"
+      min: 1
+      message: "MHEATX requires at least 1 cold feed stream on CF(IN)."
+
+    - type: count_min
+      id: MHEATX_cold_product_min
+      port: "CP(OUT)"
+      min: 1
+      message: "MHEATX requires at least 1 cold product stream on CP(OUT)."
+
+    - type: count_min
+      id: MHEATX_hot_feed_min
+      port: "HF(IN)"
+      min: 1
+      message: "MHEATX requires at least 1 hot feed stream on HF(IN)."
+
+    - type: count_min
+      id: MHEATX_hot_product_min
+      port: "HP(OUT)"
+      min: 1
+      message: "MHEATX requires at least 1 hot product stream on HP(OUT)."
+
+    - type: count_equal
+      id: MHEATX_cold_in_out_count_mismatch
+      port_a: "CF(IN)"
+      port_b: "CP(OUT)"
+      message: "MHEATX cold-side inlet/outlet stream counts must match."
+
+    - type: count_equal
+      id: MHEATX_hot_in_out_count_mismatch
+      port_a: "HF(IN)"
+      port_b: "HP(OUT)"
+      message: "MHEATX hot-side inlet/outlet stream counts must match."
+
+  RSTOIC:
+    - type: count_min
+      id: RSTOIC_feed_min
+      port: "F(IN)"
+      min: 1
+      message: "RSTOIC requires at least 1 feed stream on F(IN)."
+
+    - type: count_min
+      id: RSTOIC_product_min
+      port: "P(OUT)"
+      min: 1
+      message: "RSTOIC requires at least 1 product stream on P(OUT)."
+
+  RGIBBS:
+    - type: count_min
+      id: RGIBBS_feed_min
+      port: "F(IN)"
+      min: 1
+      message: "RGIBBS requires at least 1 feed stream on F(IN)."
+
+    - type: count_min
+      id: RGIBBS_product_min
+      port: "P(OUT)"
+      min: 1
+      message: "RGIBBS requires at least 1 product stream on P(OUT)."
+
+  RPLUG:
+    - type: count_exact
+      id: RPLUG_feed_exact
+      port: "F(IN)"
+      exact: 1
+      message: "RPLUG requires exactly 1 feed stream on F(IN)."
+
+    - type: count_exact
+      id: RPLUG_product_exact
+      port: "P(OUT)"
+      exact: 1
+      message: "RPLUG requires exactly 1 product stream on P(OUT)."
+
+    - type: note
+      id: RPLUG_limitation
+      message: "Current DB assumes single product stream for RPLUG. Extend if multi-outlet is needed."
+
+  PUMP:
+    - type: count_min
+      id: PUMP_feed_min
+      port: "F(IN)"
+      min: 1
+      message: "PUMP requires at least 1 feed stream on F(IN)."
+
+    - type: count_exact
+      id: PUMP_product_exact
+      port: "P(OUT)"
+      exact: 1
+      message: "PUMP requires exactly 1 product stream on P(OUT)."
+
+  COMPR:
+    - type: count_min
+      id: COMPR_feed_min
+      port: "F(IN)"
+      min: 1
+      message: "COMPR requires at least 1 feed stream on F(IN)."
+
+    - type: count_exact
+      id: COMPR_product_exact
+      port: "P(OUT)"
+      exact: 1
+      message: "COMPR requires exactly 1 product stream on P(OUT)."
+
+  COMPRESSOR:
+    - type: count_min
+      id: COMPR_feed_min
+      port: "F(IN)"
+      min: 1
+      message: "COMPRESSOR requires at least 1 feed stream on F(IN)."
+
+    - type: count_exact
+      id: COMPR_product_exact
+      port: "P(OUT)"
+      exact: 1
+      message: "COMPRESSOR requires exactly 1 product stream on P(OUT)."
+
+# ------------------------------------------------------------
+# Behavior for unknown BLKTYPE
+# ------------------------------------------------------------
+unknown_block_type:
+  policy: issue
+  issue_id: block_type_not_supported
+  message: "Block type not supported. Add port_candidates and rules for this BLKTYPE."
+
+port_candidates_missing:
+  policy: issue
+  issue_id: port_candidates_missing
+  message: "No port_candidates defined for this BLKTYPE."
+
+block_type_missing:
+  policy: issue
+  issue_id: block_type_missing
+  message: "Failed to read BLKTYPE for this block."

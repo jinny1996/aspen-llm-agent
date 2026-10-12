@@ -1,0 +1,45 @@
+# Gold labels for case F (paper6: ammonia Case 1 C1B, Haber-Bosch loop of Fig. 5a; semi-independent, same paper as E).
+# Written by Claude from paper6.md (main text sec 2.3.1 + appended Table S1/S2) BEFORE any validator output or the Fs result was looked at.
+# Only the claim ids (not their values) of an earlier F run's schema were used, to key the labels.  Not independent of the system builder.
+# Block ids follow the order of the F prompt: B1 MIX-3, B2 CP-4, B3 MIX-4, B4 HPH-1, B5 FHH-2, B6 NH3SYN, B7 HPC-4, B8 MPC-4, B9 LPC-3,
+# B10 CWC-2, B11 RFC-1, B12 SEP-2, B13 SPL-1, B14 V-1, B15 SEP-3; S1/S2 = the H2 / N2 feeds.  If a run numbers blocks differently, map by name.
+# Judgement calls worth a look (not escalated, they do not change which values need a question):
+#   * NH3SYN temperature: text sec 2.3.1 says 450 C, Table S2 says 425 C (conflict inside the paper).  Labelled FIXED, both accepted.
+#   * Pressure of everything between CP-4 and V-1 (200 bar) is derived from the "no pressure drop across heat exchangers" assumption
+#     plus Table S2 (CP-4 / NH3SYN / SEP-2 = 200 bar); labelled FIXED as in E.
+#   * Feed pressure (20 bar): H2 leaves SEP-1/PSA at 20 bar and N2 leaves CP-3 at 20 bar (Table S2); medium confidence.
+#   * Feed composition: stream identity (H2 / N2, "high-purity" in the text); labelled FIXED with value 1.0, medium confidence.
+#   * Purge/recycle split of SPL-1 is described only qualitatively ("partially recycled, the remaining portion is purged") -> ABSENT.
+status: DRAFT_BY_CLAUDE
+F:
+  B2.P_out_bar: {confidence: high, correct_value: 200, label: FIXED, note: '', where: 'Table S2: HB CP-4 200 bar'}
+  B4.T_out_C: {confidence: high, correct_value: null, label: ABSENT, note: HPH-1 outlet temperature not given (Table S1 is utility side only)., where: not in text or tables}
+  B4.P_bar: {confidence: high, correct_value: 200, label: FIXED, note: Derived from no pressure drop across heat exchangers., where: 'sec 2.3 no-pressure-drop assumption; Table S2 CP-4 200 bar'}
+  B5.T_out_C: {confidence: medium, correct_value: null, label: ABSENT, note: FHH-2 outlet is the reactor feed; the text gives the reactor temperature but not the heater outlet., where: not stated}
+  B5.P_bar: {confidence: high, correct_value: 200, label: FIXED, note: Derived from no pressure drop across heat exchangers., where: 'sec 2.3 no-pressure-drop assumption; Table S2'}
+  B6.T_C: {confidence: high, correct_value: 425, acceptable_values: [425, 450], label: FIXED, note: Text says 450 C, Table S2 says 425 C., where: 'sec 2.3.1 "450 C and 200 bar"; Table S2 NH3SYN 425 C'}
+  B6.P_bar: {confidence: high, correct_value: 200, label: FIXED, note: '', where: 'sec 2.3.1; Table S2 NH3SYN 200 bar'}
+  B7.T_out_C: {confidence: high, correct_value: null, label: ABSENT, note: HPC-4 outlet temperature not given., where: Table S1 HPC utility side only}
+  B7.P_bar: {confidence: high, correct_value: 200, label: FIXED, note: Derived from no pressure drop across heat exchangers., where: 'sec 2.3 assumption; Table S2'}
+  B8.T_out_C: {confidence: high, correct_value: null, label: ABSENT, note: MPC-4 outlet temperature not given., where: Table S1 MPC utility side only}
+  B8.P_bar: {confidence: high, correct_value: 200, label: FIXED, note: Derived from no pressure drop across heat exchangers., where: 'sec 2.3 assumption; Table S2'}
+  B9.T_out_C: {confidence: high, correct_value: null, label: ABSENT, note: LPC-3 outlet temperature not given., where: Table S1 LPC utility side only}
+  B9.P_bar: {confidence: high, correct_value: 200, label: FIXED, note: Derived from no pressure drop across heat exchangers., where: 'sec 2.3 assumption; Table S2'}
+  B10.T_out_C: {confidence: high, correct_value: null, label: ABSENT, note: CWC-2 outlet temperature not given (Table S1 CWC 20->25 C is the utility side)., where: Table S1 utility side only}
+  B10.P_bar: {confidence: high, correct_value: 200, label: FIXED, note: Derived from no pressure drop across heat exchangers., where: 'sec 2.3 assumption; Table S2'}
+  B11.T_out_C: {confidence: high, correct_value: null, label: ABSENT, note: RFC-1 process outlet (= SEP-2 temperature) not given; Table S1 RFC -25 C is the utility side., where: Table S1 utility side only}
+  B11.P_bar: {confidence: high, correct_value: 200, label: FIXED, note: Derived from no pressure drop across heat exchangers., where: 'sec 2.3 assumption; Table S2'}
+  B12.T_out_C: {confidence: high, correct_value: null, label: ABSENT, note: SEP-2 temperature not stated (duty 0 / 200 bar only in Table S2)., where: 'Table S2: SEP-2 duty 0, 200 bar'}
+  B12.P_out_bar: {confidence: high, correct_value: 200, label: FIXED, note: '', where: 'Table S2: SEP-2 Flash2 200 bar'}
+  B13.split_fraction[S15]: {confidence: high, correct_value: null, label: ABSENT, note: Recycle/purge split is only qualitative in the text., where: 'sec 2.3.1 "partially recycled ... remaining portion is purged"'}
+  B14.P_out_bar: {confidence: high, correct_value: 20, label: FIXED, note: '', where: 'Table S2: V-1 20 bar'}
+  B15.T_out_C: {confidence: high, correct_value: null, label: ABSENT, note: SEP-3 temperature not stated (duty 0 / 20 bar only)., where: 'Table S2: SEP-3 duty 0, 20 bar'}
+  B15.P_out_bar: {confidence: high, correct_value: 20, label: FIXED, note: '', where: 'Table S2: SEP-3 Flash2 20 bar'}
+  S1.T_C: {confidence: high, correct_value: null, label: ABSENT, note: Feed temperature of the H2 / N2 supply is not stated., where: not in text or tables}
+  S1.P_bar: {confidence: medium, correct_value: 20, label: FIXED, note: H2 from SEP-1/PSA at 20 bar; N2 from CP-3 at 20 bar ("pressurized to match the hydrogen-feed conditions")., where: 'sec 2.3.1; Table S2 SEP-1 20 bar, CP-3 20 bar'}
+  S1.flow: {confidence: high, correct_value: null, label: ABSENT, note: Only the H2:N2 = 3:1 molar ratio is stated, no absolute flow., where: 'sec 2.3.1 "molar ratio of 3:1"'}
+  S1.z: {confidence: medium, correct_value: 1.0, label: FIXED, note: Pure H2 / N2 by stream identity ("high-purity hydrogen / nitrogen")., where: 'sec 2.3.1'}
+  S2.T_C: {confidence: high, correct_value: null, label: ABSENT, note: Feed temperature of the H2 / N2 supply is not stated., where: not in text or tables}
+  S2.P_bar: {confidence: medium, correct_value: 20, label: FIXED, note: H2 from SEP-1/PSA at 20 bar; N2 from CP-3 at 20 bar., where: 'sec 2.3.1; Table S2 SEP-1 20 bar, CP-3 20 bar'}
+  S2.flow: {confidence: high, correct_value: null, label: ABSENT, note: Only the H2:N2 = 3:1 molar ratio is stated, no absolute flow., where: 'sec 2.3.1 "molar ratio of 3:1"'}
+  S2.z: {confidence: medium, correct_value: 1.0, label: FIXED, note: Pure H2 / N2 by stream identity., where: 'sec 2.3.1'}

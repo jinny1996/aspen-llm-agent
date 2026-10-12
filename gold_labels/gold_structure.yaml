@@ -1,0 +1,91 @@
+# DRAFT gold flowsheet structure for Structural F1, read by Claude from the paper figures (not yet confirmed by the user).
+# blocks: id (as printed in the figure), type = schema block type, match = regex(es) that identify the block in the schema's block
+#         `name` / `specs.paper_id` (case-insensitive; the system names its blocks after the figure labels).
+# edges : block -> block material connections of the figure (recycle edges included).  Feeds / products are not scored.
+# Each case lists the units the run prompt asked for (same scope as the label files).
+
+A:   # paper2 Fig. 2 (ATR)
+  source: "paper2 Fig. 2"
+  blocks:
+    - {id: M,  type: MIXER,  match: ['^M\b', 'mixer']}
+    - {id: E1, type: MHEATX, match: ['\bE1\b']}
+    - {id: E2, type: HEATER, match: ['\bE2\b']}
+    - {id: R1, type: RGIBBS, match: ['\bR1\b']}
+    - {id: R2, type: RGIBBS, match: ['\bR2\b']}
+    - {id: E3, type: HEATER, match: ['\bE3\b']}
+    - {id: R3, type: RGIBBS, match: ['\bR3\b']}
+    - {id: E4, type: HEATER, match: ['\bE4\b']}
+    - {id: SEP, type: FLASH2, match: ['\bSEP\b']}
+  edges: [[M, E1], [E1, E2], [E2, R1], [R1, E1], [E1, R2], [R2, E3], [E3, R3], [R3, E4], [E4, SEP]]
+
+B:   # paper main Fig. 1: methanol aromatization unit P0101 -> E0101 -> R0101 -> E0102
+  source: "paper Fig. 1 (unit of the run prompt)"
+  blocks:
+    - {id: P0101, type: PUMP,   match: ['P0101']}
+    - {id: E0101, type: MHEATX, match: ['E0101']}
+    - {id: R0101, type: RGIBBS, match: ['R0101']}
+    - {id: E0102, type: HEATER, match: ['E0102']}
+  edges: [[P0101, E0101], [E0101, R0101], [R0101, E0101], [E0101, E0102]]
+
+C:   # paper3 Fig. 2 (MIXER -> R-GIBBS)
+  source: "paper3 Fig. 2"
+  blocks:
+    - {id: MIXER,   type: MIXER,  match: ['mixer']}
+    - {id: R-GIBBS, type: RGIBBS, match: ['gibbs']}
+  edges: [[MIXER, R-GIBBS]]
+
+D:   # paper5 Fig. 2 computational scheme
+  source: "paper5 Fig. 2"
+  blocks:
+    - {id: H/ex,       type: MHEATX,     match: ['h\s*/\s*ex']}
+    - {id: Evaporator, type: HEATER,     match: ['evaporator']}
+    - {id: Reformer,   type: RGIBBS,     match: ['reformer', 'reactor']}
+    - {id: Condens1,   type: HEATER,     match: ['condens\w*\s*-?1']}
+    - {id: Separator1, type: FLASH2,     match: ['separator\s*-?1']}
+    - {id: Compressor, type: COMPRESSOR, match: ['compressor']}
+    - {id: Cond2,      type: HEATER,     match: ['cond\w*\s*-?2']}
+    - {id: Separator2, type: FLASH2,     match: ['separator\s*-?2']}
+  edges: [[H/ex, Evaporator], [Evaporator, Reformer], [Reformer, H/ex], [H/ex, Condens1], [Condens1, Separator1],
+          [Separator1, Compressor], [Compressor, Cond2], [Cond2, Separator2]]
+
+E:   # paper6 Fig. 5a, C1B steam-methane-reforming section up to SEP-1
+  source: "paper6 Fig. 5a"
+  blocks:
+    - {id: CP-1,   type: COMPRESSOR, match: ['\bCP-?1\b']}
+    - {id: P-1,    type: PUMP,       match: ['\bP-?1\b']}
+    - {id: MIX-1,  type: MIXER,      match: ['\bMIX-?1\b']}
+    - {id: LPH-1,  type: HEATER,     match: ['\bLPH-?1\b']}
+    - {id: FHH-1,  type: HEATER,     match: ['\bFHH-?1\b']}
+    - {id: REFORM, type: RGIBBS,     match: ['\bREFORM\b']}
+    - {id: HPC-1,  type: HEATER,     match: ['\bHPC-?1\b']}
+    - {id: HTS,    type: RGIBBS,     match: ['\bHTS\b']}
+    - {id: HPC-2,  type: HEATER,     match: ['\bHPC-?2\b']}
+    - {id: MPC-1,  type: HEATER,     match: ['\bMPC-?1\b']}
+    - {id: LTS,    type: RGIBBS,     match: ['\bLTS\b']}
+    - {id: MPC-2,  type: HEATER,     match: ['\bMPC-?2\b']}
+    - {id: LPC-1,  type: HEATER,     match: ['\bLPC-?1\b']}
+    - {id: CWC-1,  type: HEATER,     match: ['\bCWC-?1\b']}
+    - {id: SEP-1,  type: FLASH2,     match: ['\bSEP-?1\b']}
+  edges: [[CP-1, MIX-1], [P-1, MIX-1], [MIX-1, LPH-1], [LPH-1, FHH-1], [FHH-1, REFORM], [REFORM, HPC-1], [HPC-1, HTS],
+          [HTS, HPC-2], [HPC-2, MPC-1], [MPC-1, LTS], [LTS, MPC-2], [MPC-2, LPC-1], [LPC-1, CWC-1], [CWC-1, SEP-1]]
+
+F:   # paper6 Fig. 5a, C1B Haber-Bosch loop (H2 and N2 enter MIX-3)
+  source: "paper6 Fig. 5a"
+  blocks:
+    - {id: MIX-3,  type: MIXER,      match: ['\bMIX-?3\b']}
+    - {id: CP-4,   type: COMPRESSOR, match: ['\bCP-?4\b']}
+    - {id: MIX-4,  type: MIXER,      match: ['\bMIX-?4\b']}
+    - {id: HPH-1,  type: HEATER,     match: ['\bHPH-?1\b']}
+    - {id: FHH-2,  type: HEATER,     match: ['\bFHH-?2\b']}
+    - {id: NH3SYN, type: RGIBBS,     match: ['\bNH3SYN\b']}
+    - {id: HPC-4,  type: HEATER,     match: ['\bHPC-?4\b']}
+    - {id: MPC-4,  type: HEATER,     match: ['\bMPC-?4\b']}
+    - {id: LPC-3,  type: HEATER,     match: ['\bLPC-?3\b']}
+    - {id: CWC-2,  type: HEATER,     match: ['\bCWC-?2\b']}
+    - {id: RFC-1,  type: HEATER,     match: ['\bRFC-?1\b']}
+    - {id: SEP-2,  type: FLASH2,     match: ['\bSEP-?2\b']}
+    - {id: SPL-1,  type: SPLITTER,   match: ['\bSPL-?1\b']}
+    - {id: V-1,    type: VALVE,      match: ['\bV-?1\b']}
+    - {id: SEP-3,  type: FLASH2,     match: ['\bSEP-?3\b']}
+  edges: [[MIX-3, CP-4], [CP-4, MIX-4], [MIX-4, HPH-1], [HPH-1, FHH-2], [FHH-2, NH3SYN], [NH3SYN, HPC-4], [HPC-4, MPC-4],
+          [MPC-4, LPC-3], [LPC-3, CWC-2], [CWC-2, RFC-1], [RFC-1, SEP-2], [SEP-2, SPL-1], [SPL-1, MIX-4], [SEP-2, V-1], [V-1, SEP-3]]

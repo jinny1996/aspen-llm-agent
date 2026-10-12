@@ -1,0 +1,171 @@
+# valid_block_rules.yaml
+
+version: 1
+
+defaults:
+  input_base: "\\Data\\Blocks\\{B}\\Input"
+
+blocks:
+  FLASH2:
+    engine: generic
+    fields:
+      SPEC_OPT: "{base}\\SPEC_OPT"
+      TEMP:     "{base}\\TEMP"
+      PRES:     "{base}\\PRES"
+      DUTY:     "{base}\\DUTY"
+      VFRAC:    "{base}\\VFRAC"
+    rules:
+      - id: spec_opt_required_and_allowed
+        type: enum_required
+        field: SPEC_OPT
+        allowed: ["TP","TV","PV","TD","PD","PQ","TQ"]
+
+      - id: tp_requires_temp_and_pres
+        type: require_when
+        when: { field: SPEC_OPT, equals: "TP" }
+        require: ["TEMP","PRES"]
+
+      - id: td_requires_temp_and_duty
+        type: require_when
+        when: { field: SPEC_OPT, equals: "TD" }
+        require: ["TEMP","DUTY"]
+
+      - id: pd_requires_pres_and_duty
+        type: require_when
+        when: { field: SPEC_OPT, equals: "PD" }
+        require: ["PRES","DUTY"]
+
+  HEATER:
+    engine: generic
+    fields:
+      SPEC_OPT: "{base}\\SPEC_OPT"
+      TEMP:     "{base}\\TEMP"
+      PRES:     "{base}\\PRES"
+      DUTY:     "{base}\\DUTY"
+      VFRAC:    "{base}\\VFRAC"
+    rules:
+      - id: spec_opt_required_and_allowed
+        type: enum_required
+        field: SPEC_OPT
+        allowed:
+          ["TP","TV","TD","TDPPARM","PV","PD","PDT","PDEGSUP","PDEGSUB",
+           "VDPPARM","DDPPARM","DTV","DTD","DTDPPARM","DEGSUPDPPARM","DEGSUBDPPARM",
+           "PQ","TQ","DTQ","DPPARMQ"]
+      - id: tp_requires_temp_and_pres
+        type: require_when
+        when: { field: SPEC_OPT, equals: "TP" }
+        require: ["TEMP","PRES"]
+      - id: td_requires_temp_and_duty
+        type: require_when
+        when: { field: SPEC_OPT, equals: "TD" }
+        require: ["TEMP","DUTY"]
+      - id: pd_requires_pres_and_duty
+        type: require_when
+        when: { field: SPEC_OPT, equals: "PD" }
+        require: ["PRES","DUTY"]
+
+  MIXER:
+    engine: generic
+    fields: {}
+    rules: []
+
+  RSTOIC:
+    engine: generic
+    fields:
+      SPEC_OPT: "{base}\\SPEC_OPT"
+      TEMP:     "{base}\\TEMP"
+      PRES:     "{base}\\PRES"
+      DUTY:     "{base}\\DUTY"
+    rules:
+      - id: spec_opt_required_and_allowed
+        type: enum_required
+        field: SPEC_OPT
+        allowed: ["TP","TD","PD"]
+      - id: tp_requires_temp_and_pres
+        type: require_when
+        when: { field: SPEC_OPT, equals: "TP" }
+        require: ["TEMP","PRES"]
+      - id: td_requires_temp_and_duty
+        type: require_when
+        when: { field: SPEC_OPT, equals: "TD" }
+        require: ["TEMP","DUTY"]
+      - id: pd_requires_pres_and_duty
+        type: require_when
+        when: { field: SPEC_OPT, equals: "PD" }
+        require: ["PRES","DUTY"]
+
+  RGIBBS:
+    engine: generic
+    fields:
+      SPEC_OPT: "{base}\\SPEC_OPT"
+      TEMP:     "{base}\\TEMP"
+      PRES:     "{base}\\PRES"
+      DUTY:     "{base}\\DUTY"
+    rules:
+      - id: spec_opt_required_and_allowed
+        type: enum_required
+        field: SPEC_OPT
+        allowed: ["TEMP","DUTY"]
+      - id: pres_always_required
+        type: required
+        fields: ["PRES"]
+      - id: temp_required_when_temp_mode
+        type: require_when
+        when: { field: SPEC_OPT, equals: "TEMP" }
+        require: ["TEMP"]
+      - id: duty_required_when_duty_mode
+        type: require_when
+        when: { field: SPEC_OPT, equals: "DUTY" }
+        require: ["DUTY"]
+
+  PUMP:
+    engine: generic
+    fields:
+      OPT_SPEC: "{base}\\OPT_SPEC"
+      PRES:     "{base}\\PRES"
+      DELP:     "{base}\\DELP"
+      POWER:    "{base}\\POWER"
+    rules:
+      - id: opt_spec_required_and_allowed
+        type: enum_required
+        field: OPT_SPEC
+        allowed: ["PRES","DELP"]
+      - id: pres_required_when_pres
+        type: require_when
+        when: { field: OPT_SPEC, equals: "PRES" }
+        require: ["PRES"]
+      - id: delp_required_when_delp
+        type: require_when
+        when: { field: OPT_SPEC, equals: "DELP" }
+        require: ["DELP"]
+
+  COMPR:
+    engine: generic
+    fields:
+      OPT_SPEC:   "{base}\\OPT_SPEC"
+      PRES:       "{base}\\PRES"
+      DELP:       "{base}\\DELP"
+      TYPE:       "{base}\\TYPE"
+      MODEL_TYPE: "{base}\\MODEL_TYPE"
+    rules:
+      - id: opt_spec_required_and_allowed
+        type: enum_required
+        field: OPT_SPEC
+        allowed: ["PRES","DELP"]
+      - id: pres_required_when_pres
+        type: require_when
+        when: { field: OPT_SPEC, equals: "PRES" }
+        require: ["PRES"]
+      - id: delp_required_when_delp
+        type: require_when
+        when: { field: OPT_SPEC, equals: "DELP" }
+        require: ["DELP"]
+
+  COMPRESSOR:
+    inherits: "COMPR"   # 같은 룰 재사용
+
+  MHEATX:
+    engine: plugin
+
+  RPLUG:
+    engine: plugin

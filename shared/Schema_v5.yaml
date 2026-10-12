@@ -1,0 +1,465 @@
+version: 4
+schema_name: aspen_ir_layer
+
+
+# =====================================================
+# GLOBAL VALUE POLICY (provenance-aware numeric field)
+# =====================================================
+# All process specs should use the following structure
+# instead of raw number/null:
+#
+# example_field:
+#   value: <number | string>
+#   source: paper | inferred | default | llm | user
+#   confidence: <0~1 float | null>
+#   evidence: null | {doc_id, locator, quote}
+#   rationale: null | string
+#
+# Raw null is discouraged except where explicitly allowed.
+
+value_schema:
+  type: object
+  required: [value, source]
+  fields:
+    value:
+      type: [number, string]   # allow string if needed (e.g., "AUTO")
+    source:
+      type: string
+      enum: ["paper", "inferred", "default", "llm", "user"]
+    confidence:
+      type: [number, "null"]
+    evidence:
+      type: [object, "null"]
+      fields:
+        doc_id:   {type: [string, "null"]}
+        locator:  {type: [string, "null"]}
+        quote:    {type: [string, "null"]}
+    rationale:
+      type: [string, "null"]
+
+
+# -------------------------
+# 0. Scope (target process)
+# -------------------------
+scope_schema:
+  required: [target_unit_name, target_unit_keywords, boundary_rule]
+  fields:
+    target_unit_name: {type: string}
+    target_unit_keywords: {type: array}
+    boundary_rule: {type: string}
+    exclusion_note: {type: [string, "null"]}
+    rationale: {type: [string, "null"]}
+
+# -------------------------
+# 1. Aspen property setup
+# -------------------------
+aspen_schema:
+  required: [property_method, components]
+  fields:
+    property_method:
+      type: string
+      enum: ["RK-SOAVE", "PR-BM", "NRTL", "ENRTL-RK", "ELECNRTL"]   # 너가 쓰는 것만 유지
+    components:
+      type: array
+      item:
+        required: [aspen_id]
+        fields:
+          aspen_id:
+            type: [string, "null"]
+            description: "Aspen databank alias used in INP generation. Use ONLY aliases from aspen_components.yaml (e.g., C4H10-1). Do NOT use base formula-only IDs like C4H10."
+          formula:
+            type: [string, "null"]
+            description: "Molecular formula for human/audit only (e.g., C4H10). Not used directly for Aspen execution."
+          name:
+            type: [string, "null"]
+            description: "Common name from paper/user (e.g., Propylene). Optional."
+          notes:
+            type: [string, "null"]
+
+# -------------------------
+# 2. Flowsheet (blocks/streams/connectivity)
+# -------------------------
+flowsheet_schema:
+  required: [blocks, streams, connectivity]
+  fields:
+    blocks:
+      type: array
+      item:
+        required: [id, type]
+        fields:
+          id: {type: string, pattern: "^B[0-9]+$"}     # B101 형태 추천
+          type:
+            type: string
+            enum: ["PUMP", "HEATER", "MHeatX", "RGIBBS", "FLASH2", "MIXER", "SPLITTER", "VALVE", "COMPRESSOR"]
+          name: {type: [string, "null"]}
+          specs: {type: [object, "null"]}              # type별 상세는 아래 block_specs_schema에서
+
+    streams:
+      type: array
+      item:
+        required: [id, type, role]
+        fields:
+          id:   {type: string, pattern: "^S[0-9]+$"}
+          type: {type: string, enum: ["MATERIAL"]}    # 일단 material only
+          role: {type: string, enum: ["FEED", "INTERNAL", "PRODUCT"]}
+   
+    connectivity:
+      type: object
+      required: [edges]
+      description: "Directed stream edges. FEED는 from=null, PRODUCT는 to.block=null 허용."
+      edges:
+        type: array
+        item:
+          required: [stream, to]
+          fields:
+            stream: {type: string}
+            from:
+              type: [object, "null"]
+              fields:
+                block: {type: [string, "null"]}
+                port_role:
+                  type: [string, "null"]
+                  enum: ["OUT","COLD_OUT","HOT_OUT","V","L"]
+            to:
+              type: object
+              required: [port_role]
+              fields:
+                block: {type: [string, "null"]}
+                port_role:
+                  type: string
+                  enum: ["IN","OUT","COLD_IN","COLD_OUT","HOT_IN","HOT_OUT","VAP","LIQ","V","L"]
+
+
+# -------------------------
+# 3. IO specs (feed only)
+# -------------------------
+io_schema:
+  required: [feeds]
+  fields:
+    feeds:
+      type: array
+      item:
+        required: [stream, specs]
+        fields:
+          stream: {type: string}  # must be a stream with role=FEED
+          specs:
+            type: object
+            required: [flow, basis, z, T_C, P_bar]
+            fields:
+              flow:
+                type: object
+                required: [value, basis, source]
+                fields:
+                  value: {type: number}                 # null 금지
+                  basis: {type: string, enum: ["MASS", "MOLE"]}
+                  source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+                  confidence: {type: [number, "null"]}
+                  evidence:
+                    type: [object, "null"]
+                    fields:
+                      doc_id:  {type: [string, "null"]}
+                      locator: {type: [string, "null"]}
+                      quote:   {type: [string, "null"]}
+                  rationale: {type: [string, "null"]}
+
+              basis: {type: string, enum: ["MOLE-FRAC", "MASS-FRAC"]}  # 조성 basis
+              z: {type: object}                          # null 금지 (COMP: frac)
+
+              T_C:
+                type: object
+                required: [value, source]
+                fields:
+                  value: {type: number}
+                  source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+                  confidence: {type: [number, "null"]}
+                  evidence:
+                    type: [object, "null"]
+                    fields:
+                      doc_id:  {type: [string, "null"]}
+                      locator: {type: [string, "null"]}
+                      quote:   {type: [string, "null"]}
+                  rationale: {type: [string, "null"]}
+
+              P_bar:
+                type: object
+                required: [value, source]
+                fields:
+                  value: {type: number}
+                  source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+                  confidence: {type: [number, "null"]}
+                  evidence:
+                    type: [object, "null"]
+                    fields:
+                      doc_id:  {type: [string, "null"]}
+                      locator: {type: [string, "null"]}
+                      quote:   {type: [string, "null"]}
+                  rationale: {type: [string, "null"]}
+
+# -------------------------
+# 4. Codegen policy (ports/id)
+# -------------------------
+codegen_schema:
+  required: [port_policy]
+  fields:
+    port_policy:
+      type: object
+      description: "Block-type -> port candidates used by connect_stream_auto"
+      example:
+        PUMP:
+          IN: ["F(IN)","INLET","IN"]
+          OUT: ["P(OUT)","OUTLET","OUT"]
+        HEATER:
+          IN: ["F(IN)","INLET","IN"]
+          OUT: ["P(OUT)","OUTLET","OUT"]
+        RGIBBS:
+          IN: ["F(IN)","INLET","IN"]
+          OUT: ["P(OUT)","OUTLET","OUT"]
+        FLASH2:
+          IN: ["F(IN)","INLET","IN"]
+          V: ["V(OUT)","VAP","V"]
+          L: ["L(OUT)","LIQ","L"]
+        MIXER:
+          IN: ["F(IN)","INLET","IN"]
+          OUT: ["P(OUT)","OUTLET","OUT"]
+
+
+        # MHeatX 전용
+        MHeatX:
+          COLD_IN:  ["CF"]
+          COLD_OUT: ["CP"]
+          HOT_IN:   ["HF"]
+          HOT_OUT:  ["HP"]
+
+
+# -------------------------
+# 5. Block spec schema (optional but recommended)
+# -------------------------
+block_specs_schema:
+  HEATER:
+    fields:
+      spec_mode: {type: [string, "null"], enum: ["TP", "TD", "PD", "DUTY", "OUTLET_T"]}
+      T_out_C:
+        type: [object, "null"]     # value_schema
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+      P_bar:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+      duty:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+
+
+  PUMP:
+    required_one_of: [P_out_bar, dP_bar]
+    fields:
+      P_out_bar:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+      dP_bar:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+      eff:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+
+  RGIBBS:
+    fields:
+      T_C:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+      P_bar:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+
+  MHeatX:
+    fields:
+      # inlet -> outlet 매핑 (필수)
+      outlet_streams:
+        type: object
+        description: "Mapping of {in_stream: out_stream}"
+
+      # TEMP spec (N쌍이면 N-1개만 지정)
+      temp_specs:
+        type: array
+        description: "Outlet temperature specs (TEMP only). Recommended count = (#outlet_streams - 1)"
+        item:
+          required: [out_stream, T_out_C]
+          fields:
+            out_stream: {type: string}
+            T_out_C:
+              type: object
+              required: [value, source]
+              fields:
+                value: {type: number}
+                source:
+                  type: string
+                  enum: ["paper", "inferred", "default", "llm", "user"]
+                confidence: {type: [number, "null"]}
+                evidence:
+                  type: [object, "null"]
+                rationale: {type: [string, "null"]}
+
+  FLASH2:
+    fields:
+      spec_mode:
+        type: [string, "null"]
+        enum: ["TP", "TD", "PD"]
+      T_out_C:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+      P_out_bar:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+      duty:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+
+  MIXER:
+    fields:
+      P_out_bar:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+
+  SPLITTER:
+    fields:
+      split_fractions:
+        type: [object, "null"]
+        description: "Mapping of {out_stream: fraction}."
+      split_basis:
+        type: [string, "null"]
+        enum: ["MOLE", "MASS", "VOL"]
+
+  VALVE:
+    required_one_of: [P_out_bar, dP_bar]
+    fields:
+      P_out_bar:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+      dP_bar:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+
+  COMPRESSOR:
+    required_one_of: [P_out_bar, ratio]
+    fields:
+      P_out_bar:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+      ratio:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+      eff:
+        type: [object, "null"]
+        fields:
+          value: {type: number}
+          source: {type: string, enum: ["paper", "inferred", "default", "llm", "user"]}
+          confidence: {type: [number, "null"]}
+          evidence: {type: [object, "null"]}
+          rationale: {type: [string, "null"]}
+
+# -------------------------
+# 6. Equipment-specific generation rules
+# -------------------------
+equipment_rules:
+  FLASH2:
+    description: "Canonical product outlet policy for FLASH2/product phase separator blocks."
+    required_product_outlets:
+      vapor:
+        from_port_role: V
+        to_port_role: V
+        stream_role: PRODUCT
+      liquid:
+        from_port_role: L
+        to_port_role: L
+        stream_role: PRODUCT
+    forbidden_connectivity_patterns:
+      - description: "Do not model vapor product as generic OUT -> VAP."
+        from_port_role: OUT
+        to_port_role: VAP
+      - description: "Do not model liquid product as generic OUT -> LIQ."
+        from_port_role: OUT
+        to_port_role: LIQ
+    generation_notes:
+      - "If a FLASH2 block is included, declare distinct MATERIAL PRODUCT streams for vapor and liquid outlets."
+      - "Use only canonical V and L outlet streams for FLASH2 products; do not create duplicate OUT/VAP-LIQ product streams."
+      - "codegen.port_policy for FLASH2 should expose IN, V, and L roles."

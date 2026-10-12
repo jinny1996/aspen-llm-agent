@@ -1,0 +1,73 @@
+# Gold labels for HOLD-OUT case D (paper5: LOHC / methylcyclohexane dehydrogenation, Fig. 2 computational scheme).
+# Written by Claude from the paper text and Figs 2 and 7 ONLY, BEFORE any validator output on D was looked at.
+# Not independent of the system builder (Claude wrote both): the user asked for this workflow; the two items the user
+# had to decide are recorded under `user_decisions`.  Labels = FIXED | OPEN | ABSENT as in
+# phase13/2e_gold_sheet.md.  paper5.md has no SI, so there is no hidden truth: labels are what the paper itself fixes.
+#
+# Facts the labels rest on (paper5.md):
+#   * Balance case used throughout the results: MCH 10 kg/h, inlet 20 degC, p = 2 bar, reformer 350 degC,
+#     Condenser1 outlet 50 degC, compression "up to 10 bar", Cond2 outlet 40 degC (Sankey list, mass-balance paragraph, Fig. 7).
+#   * Concept text also gives ranges / other numbers: reformer 300-350 degC and 2-2.5 bar; pump 1 -> 2-2.5 bar;
+#     compression "up to 15-20 bar" (section TCR concept) vs "up to 10 bar" (balances, conclusion).
+#   * Never given: exchanger / evaporator outlet temperature, any pressure drop, property method.
+#   * Fig. 7 has a typo: the "Mixture H2+toluene" box has its two labels swapped (350.0 C / 10.00 kg/h).
+
+status: DRAFT_BY_CLAUDE, user decisions applied 2026-10-08
+user_decisions:
+  compressor_section_pressure: "10 bar is the paper's value (the computational scheme matches the balances). B6.P_out_bar, B7.P_bar, B8.P_out_bar are FIXED 10; B6.ratio = 10/2 = 5 follows."
+  feed_pressure: "Depends on whether a pump is modelled. With a pump the feed is the tank at 1 bar; without a pump (this task: Fig. 2 units only, no pump) the feed is at the process pressure 2-2.5 bar. The run prompt excludes the pump, so S1.P_bar = FIXED 2 (acceptable 2-2.5)."
+  figures: "Fig. 1 is the PFD (MCH tank, pump, H2 purification); Fig. 2 is its computational scheme with separators added; Fig. 7 gives the stream values. Fig. 1 was added to the folder after the first three runs (18:41 vs 18:24-18:31), so those runs saw Fig. 2 + Fig. 7 only."
+
+D:
+  B1.T_out_C[S2]:
+    {label: ABSENT, correct_value: null, confidence: high, where: "sec. TCR concept",
+     note: "Only 'close to evaporation temperature' is said; no number for the exchanger outlet."}
+  B2.P_bar:
+    {label: FIXED, correct_value: 2, acceptable_values: [2, 2.5], confidence: medium, where: "Sankey / Fig. 5 caption p = 2 bar; concept 2-2.5 bar",
+     note: "System pressure of the balances is 2 bar; the concept text gives 2-2.5 bar; no pressure drops are discussed."}
+  B2.T_out_C:
+    {label: ABSENT, correct_value: null, confidence: high, where: "sec. TCR concept",
+     note: "Evaporator outlet temperature is never given (the vapour is fed to the reformer)."}
+  B2.duty:
+    {label: FIXED, correct_value: 2.497, confidence: high, where: "Sankey list: 2.497 kW supplied in the evaporator",
+     note: "For the balance case (p 2 bar, reformer 350 C, MCH 10 kg/h) = the case modelled."}
+  B3.P_bar:
+    {label: FIXED, correct_value: 2, acceptable_values: [2, 2.5], confidence: medium, where: "Sankey list; concept: 2-2.5 bar",
+     note: "Balance case 2 bar; the concept range 2-2.5 is also stated."}
+  B3.T_C:
+    {label: FIXED, correct_value: 350, confidence: high, where: "Sankey list, Fig. 7, mass balance",
+     note: "300-350 C is the recommended range, but every balance uses 350 C."}
+  B4.P_bar:
+    {label: FIXED, correct_value: 2, confidence: medium, where: "system pressure 2 bar; compression only after Separator1",
+     note: "Condenser1 pressure is not stated separately; the loop is at the system pressure until the compressor."}
+  B4.T_out_C:
+    {label: FIXED, correct_value: 50, confidence: high, where: "mass balance: 'cooled in the condenser1 up to 50 C'; Fig. 7"}
+  B5.P_out_bar:
+    {label: FIXED, correct_value: 2, confidence: medium, where: "system pressure 2 bar", note: "Same reasoning as B4.P_bar."}
+  B5.T_out_C:
+    {label: FIXED, correct_value: 50, confidence: high, where: "Fig. 7 (Separator1 streams at 50 C)"}
+  B6.P_out_bar:
+    {label: FIXED, correct_value: 10, confidence: high, where: "balances, conclusion, Fig. 7: 'compressed up to 10 bar'",
+     note: "User decision. The concept text's '15-20 bar' is not the modelled case."}
+  B6.ratio:
+    {label: FIXED, correct_value: 5, confidence: medium, where: "derived: 2 bar -> 10 bar",
+     note: "Not printed in the paper; follows from the system pressure and the 10 bar outlet."}
+  B7.P_bar:
+    {label: FIXED, correct_value: 10, confidence: high, where: "as B6.P_out_bar", note: "Cond2 operates at the compressor outlet pressure."}
+  B7.T_out_C:
+    {label: FIXED, correct_value: 40, confidence: high, where: "mass balance: 'cooled up to 40 C'; Fig. 7; conclusion",
+     note: "The initial-data sentence says 50 C 'after the condensers'; every later statement and Fig. 7 give 40 C after Cond2."}
+  B8.P_out_bar:
+    {label: FIXED, correct_value: 10, confidence: high, where: "as B6.P_out_bar", note: "Separator2 is at the Cond2 pressure."}
+  B8.T_out_C:
+    {label: FIXED, correct_value: 40, confidence: high, where: "Fig. 7 (Separator2 streams at 40 C)"}
+  S1.P_bar:
+    {label: FIXED, correct_value: 2, acceptable_values: [2, 2.5], confidence: medium, where: "TCR concept: pump 1 -> 2-2.5 bar; Fig. 1 shows the pump, Fig. 2 does not",
+     note: "User decision: with a pump modelled the feed would be 1 bar; this task has no pump (Fig. 2 units only), so the feed is at the process pressure."}
+  S1.T_C:
+    {label: FIXED, correct_value: 20, confidence: high, where: "energy-balance initial data; Fig. 7: 'MCH ... 20.00 C'"}
+  S1.flow:
+    {label: FIXED, correct_value: 10, confidence: high, where: "energy-balance initial data; Fig. 7: 10.00 kg/h"}
+  S1.z:
+    {label: FIXED, correct_value: {MCH: 1.0}, confidence: low, where: "stream is 'Cold MCH' from the MCH tank",
+     note: "Main component implied by the name; purity not stated. Same low-confidence reading as case A's pure-named feeds."}

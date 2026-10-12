@@ -1,0 +1,145 @@
+﻿Header:
+  description: |
+    Mandatory Aspen INP header section to be placed before COMPONENTS.
+  content: |
+    DYNAMICS
+        DYNAMICS RESULTS=ON
+
+    IN-UNITS MET VOLUME-FLOW='l/hr' ENTHALPY-FLO='kcal/hr'  &
+            HEAT-TRANS-C='kcal/hr-sqm-K' TEMPERATURE=C DELTA-T=C  &
+            HEAD=meter HEAT=kcal MOLE-CONC='mol/l' SHORT-LENGTH=mm 
+
+    DEF-STREAMS CONVEN ALL 
+
+    MODEL-OPTION 
+
+    DATABANKS 'APV140 PURE40' / 'APV140 AQUEOUS' / 'APV140 SOLIDS' &
+             / 'APV140 INORGANIC' / 'APESV140 AP-EOS' /  &
+            'NISTV140 NIST-TRC' / NOASPENPCD
+
+    PROP-SOURCES 'APV140 PURE40' / 'APV140 AQUEOUS' /  &
+            'APV140 SOLIDS' / 'APV140 INORGANIC' / 'APESV140 AP-EOS' &
+             / 'NISTV140 NIST-TRC'
+
+
+Component:
+  - name: add_component
+    description: Add a chemical component to Aspen simulation via .inp file.
+    args:
+      alias:
+        type: str
+        description: |
+          Aspen databank component identifier (a.k.a. Alias).
+          Use ONLY this value for both Component ID and Alias in the INP file.
+          - Neutral molecules: e.g., H2O, CO2, CH4
+          - Cations: use Aspen convention (Ca2+ → CA++, Mg2+ → MG++, Li+ → LI+)
+          - Anions: use Aspen convention (SO4²⁻ → SO4--, Cl⁻ → CL-)
+    example:
+      alias: C3H6O-1
+
+
+ReactionAssignment:
+  - name: assign_reaction
+    description: Assign one or more reactions to a block.
+    args:
+      block_name:
+        type: str
+        description: Block ID (e.g., RCSTR-101, RPLUG-201)
+      block_type:
+        type: str
+        description: Block type (e.g., RCSTR, RPLUG, RADFRAC)
+      reaction_ids:
+        type: list
+        description: List of reaction IDs to be assigned
+        example:
+          - R-1
+          - R-3
+      stages:
+        type: list
+        description: Optional, stage range for RADFRAC
+        default: []
+        example:
+          - 1
+          - 5
+
+
+Reaction:
+  - name: define_reaction
+    description: Define a chemical reaction in Aspen via .inp file.
+    args:
+      reaction_id:
+        type: str
+        description: Reaction ID (e.g., R-1, R-2, R-3)
+      reaction_type:
+        type: str
+        description: Reaction type (GENERAL, REAC-DIST, etc.)
+      reac_class:
+        type: str
+        description: Reaction class (EQUILIBRIUM, POWERLAW, KINETIC, etc.)
+        default: ""
+      data:
+        type: dict
+        description: Reaction setup parameters
+        example:
+          phase: V
+          cbasis: PARTIALPRES
+          rbasis: CAT-WT
+          rate_unitc: "MOL/GM-S"
+          pres_unit: BAR
+          name: 1
+      rate_constants:
+        type: dict
+        description: Rate constants
+        example:
+          pre_exp: 5.19e9
+          act_energy: 257.01   # kJ/mol
+      stoic:
+        type: dict
+        description: |
+          Stoichiometry {species: coefficient}
+        example:
+          CH4: -1
+          H2O: -1
+          CO: 1
+          H2: 3
+      powlaw_exp:
+        type: dict
+        description: Optional power law exponents
+        default: {}
+        example:
+          CH4: 1
+          H2O: 1
+      dforce_exp:
+        type: dict
+        description: Optional driving force exponents
+        default: {}
+        example:
+          CH4: 1
+          H2O: 1
+      activity:
+        type: dict
+        description: Optional reaction activity settings
+        default: {}
+        example:
+          enable: true
+
+
+
+InpFormat:
+  general:
+    indent: "    " # 4칸 띄어쓰기
+    blank_line_after_header: true
+
+  sections:
+    COMPONENTS:
+      enabled: true
+      header: "COMPONENTS"
+      line_format: "{formula} {alias} /"
+
+    REACTIONS:
+      enabled: true
+      reaction_header_format: "REACTION {reaction_id}"
+      stoic_format: "{species} {coeff}"
+    
+    REACTION_ASSIGN:
+      enabled: true

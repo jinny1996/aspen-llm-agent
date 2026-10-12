@@ -1,0 +1,39 @@
+# DRAFT gold labels for case B (methanol aromatization unit P0101 -> E0101 -> R0101 -> E0102), written by Claude from the
+# paper's own SI.  Labels are relative to what the SYSTEM SEES: paper_main.md (main text only).  The SI
+# (jinny_DB/parsed/paper/auto/paper.md, "Table: stream information of aromatization unit") is the hidden truth:
+#
+#   stream           1       2       3       4
+#   temperature/C    25.02   400.00  425.00  40.00
+#   pressure/bar     3       2.95    2.95    2.85
+#   mass flow kg/h   303823.76 (all)       methanol 100 % in streams 1-2
+#
+# Block map: B1 PUMP P0101 | B2 MHeatX E0101 (feed preheater) | B3 RGIBBS R0101 | B4 HEATER E0102 | S1 methanol feed
+# FIXED  = stated in the main text.   ABSENT = only the SI has it (a gap the system cannot close from main text).
+# `correct_value` is the SI value, also for ABSENT items, so a wrong "support" can be detected.
+# Not yet confirmed by the user.
+
+B:
+  B1.P_out_bar:
+    {label: ABSENT, correct_value: 3, confidence: high, where: "SI stream table, stream 1 pressure",
+     note: "Pump outlet. Main text gives no pressure for this unit."}
+  B2.T_out_C[S3]:
+    {label: FIXED, correct_value: 400, confidence: high, where: "main sec 2.2.2: 'preheat the feed to 400 C'; SI stream 2",
+     note: "Feed preheater outlet."}
+  B3.T_C:
+    {label: ABSENT, correct_value: 425, confidence: high, where: "SI stream 3 temperature",
+     note: "Reactor temperature. The only 400 in the main text is the preheater outlet: the case that motivated the validator."}
+  B3.P_bar:
+    {label: ABSENT, correct_value: 2.95, confidence: high, where: "SI stream 3 pressure", note: "Reactor pressure, SI only."}
+  B4.T_out_C:
+    {label: FIXED, correct_value: 40, confidence: high, where: "main sec 2.2.2: products 'cooled to 40 C (E0102)'; SI stream 4"}
+  B4.P_bar:
+    {label: ABSENT, correct_value: 2.85, confidence: high, where: "SI stream 4 pressure", note: "Cooler outlet pressure, SI only."}
+  S1.T_C:
+    {label: ABSENT, correct_value: 25.02, confidence: high, where: "SI stream 1 temperature", note: "Methanol feed temperature, SI only."}
+  S1.P_bar:
+    {label: ABSENT, correct_value: 3, confidence: high, where: "SI stream 1 pressure", note: "Methanol feed pressure, SI only."}
+  S1.flow:
+    {label: FIXED, correct_value: 303823.76, confidence: high, where: "main Table 1: 'Input (kg/h) Methanol 303823.76'; SI stream table"}
+  S1.z:
+    {label: FIXED, correct_value: {METHANOL: 1.0}, confidence: medium, where: "main sec 2.2.2 'Methanol is fed'; SI: methanol 100 % in stream 1",
+     note: "Pure methanol is implied by the text; the 100 % figure itself is in the SI."}

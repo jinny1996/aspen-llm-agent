@@ -1,0 +1,106 @@
+# valida_feeds_rules.yaml
+version: 1
+description: >
+  Feed stream validator rules for Aspen Data Tree.
+  The validator:
+   1) Enumerates streams under \Data\Streams
+   2) Classifies FEED/PRODUCT using Ports SOURCE/DEST child existence
+   3) Validates FEED streams have required inputs: T, P, and composition/flow
+
+# ------------------------------------------------------------
+# How to enumerate streams and classify FEED/PRODUCT
+# ------------------------------------------------------------
+stream_probe:
+  stream_list_path: "\\Data\\Streams"
+
+  ports:
+    dest_path: "\\Data\\Streams\\{stream}\\Ports\\DEST"
+    source_path: "\\Data\\Streams\\{stream}\\Ports\\SOURCE"
+
+  classification:
+    # FEED: no SOURCE connections, has DEST connections
+    # PRODUCT: has SOURCE connections, no DEST connections
+    # INTERNAL: has both
+    # ISOLATED: has none
+    feed:
+      source_has_children: false
+      dest_has_children: true
+    product:
+      source_has_children: true
+      dest_has_children: false
+
+  node_has_children_keys:
+    # Prefer AttributeValue("Has Children") if available, fallback to Elements/Children count
+    attribute_keys: ["Has Children", "HasChildren"]
+    fallback_child_collections: ["Elements", "Children"]
+
+# ------------------------------------------------------------
+# Required FEED inputs (paths)
+# ------------------------------------------------------------
+required_inputs:
+  temperature:
+    id: T
+    path: "\\Data\\Streams\\{stream}\\Input\\TEMP\\MIXED"
+    specified_keys: ["Specified", "IsSpecified", "INPUT", "Input", "Status"]
+
+  pressure:
+    id: P
+    path: "\\Data\\Streams\\{stream}\\Input\\PRES\\MIXED"
+    specified_keys: ["Specified", "IsSpecified", "INPUT", "Input", "Status"]
+
+  composition:
+    id: COMPOSITION_FLOW
+    # BASIS determines which case is valid
+    basis_path: "\\Data\\Streams\\{stream}\\Input\\BASIS\\MIXED"
+    totflow_path: "\\Data\\Streams\\{stream}\\Input\\TOTFLOW\\MIXED"
+    comp_parent_path: "\\Data\\Streams\\{stream}\\Input\\FLOW\\MIXED"
+    component_value_path: "\\Data\\Streams\\{stream}\\Input\\FLOW\\MIXED\\{component}"
+    specified_keys: ["Specified", "IsSpecified", "INPUT", "Input", "Status"]
+
+# ------------------------------------------------------------
+# Composition valid cases
+# ------------------------------------------------------------
+composition_cases:
+  # FRAC case: TOTFLOW must be specified + component fractions sum to 1 within tolerance
+  frac_case:
+    enabled: true
+    basis_contains: "FRAC"
+    requires_totflow_specified: true
+    requires_at_least_one_component_specified: true
+    fraction_sum:
+      target: 1.0
+      tolerance: 0.001
+
+  # FLOW case: component flows sum must be > 0 (TOTFLOW optional)
+  flow_case:
+    enabled: true
+    basis_contains: "FLOW"
+    requires_at_least_one_component_specified: true
+    flow_sum:
+      min_exclusive: 0.0
+
+# ------------------------------------------------------------
+# Behavior for unsupported or missing BASIS
+# ------------------------------------------------------------
+basis_policy:
+  missing_basis:
+    policy: issue
+    issue_id: basis_missing
+    message: "BASIS is not specified for FEED stream."
+
+  unsupported_basis:
+    policy: issue
+    issue_id: basis_not_supported
+    message: "BASIS is not supported by current DB (only *-FRAC and *-FLOW cases are supported)."
+
+# ------------------------------------------------------------
+# Issue templates (optional metadata for downstream LLM/pipeline)
+# (Your Python currently emits rule_id=feed_missing_required_inputs;
+#  this section is for DB-driven expansion later.)
+# ------------------------------------------------------------
+issue_templates:
+  feed_missing_required_inputs:
+    category: FEED_INPUT
+    target_type: STREAM
+    message: "FEED stream is missing required inputs (T/P/Composition)."
+    required: "T, P, and valid composition/flow input"

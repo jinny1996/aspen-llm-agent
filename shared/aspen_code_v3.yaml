@@ -1,0 +1,1700 @@
+
+categories:
+
+  AspenControl:
+    - name: start_aspen_doc
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object (created)
+      template: 'start_aspen_doc()'
+      description: Start Aspen COM document (returns doc object)
+
+    - name: open_aspen
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        bkp_path:
+          type: str
+          description: Path to .bkp file (optional)
+        visible:
+          type: bool
+          default: true
+          description: Set Aspen window visibility
+      template: 'open_aspen({doc}, bkp_path={bkp_path}, visible={visible})'
+      description: Set visibility and optionally load a .bkp file
+
+    - name: save_aspen
+      description: Save the current Aspen document as a .bkp file.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        path:
+          type: str
+          description: Path where the .bkp file will be saved
+      example: |
+        save_aspen(doc, r"C:\Simulations\new_case.bkp")
+
+    - name: run_aspen
+      description: Run the current Aspen simulation.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+      example: |
+        run_aspen(doc)
+
+    - name: export_inp
+      description: Export the current Aspen simulation as an .inp file.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        filename:
+          type: str
+          description: Path where the .inp file will be exported
+      example: |
+        export_inp(doc, r"C:\Simulations\case.inp")
+
+    - name: export_cpm
+      description: Export the current Aspen simulation as an .cpm file.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        filename:
+          type: str
+          description: Path where the .cpm file will be exported
+      example: |
+        export_cpm(doc, r"C:\Simulations\case.cpm")
+
+    - name: close_aspen
+      description: Close the Aspen document.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+      notes: False = close without saving, True = save before closing
+      example: |
+        close_aspen(doc)
+  
+
+  PropertyMethod:
+    - name: set_property_method
+      description: >
+        Set the property method for the Aspen simulation by writing to
+        \Data\Properties\Specifications\Input\GOPSETNAME
+        (e.g., PENG-ROB, NRTL, ELECNRTL, UNIQUAC, ENRTL-RK, RK-SOAVE).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        method:
+          type: str
+          default: PENG-ROB
+          description: Name of the property method to set.
+      example: |
+        set_property_method(doc, "PENG-ROB")
+
+
+  StreamBlock:
+    - name: stream_add
+      description: >
+        Add a new stream (Material or Heat) to Aspen.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        stream_name:
+          type: str
+          description: Stream name (e.g., "S1", "FEED1")
+        stype:
+          type: str
+          default: MATERIAL
+          description: Stream type ("MATERIAL" or "HEAT").
+      example: |
+        stream_add(doc, "S1", "MATERIAL")
+
+    - name: block_add
+      description: >
+        Add a new block to Aspen.
+        HARD RULE: Use MHeatX for heat exchanger blocks.
+        If schema/source says HeatX, convert it to MHeatX before code generation.
+        HARD RULE: Use FSplit for splitter blocks.
+        If schema/source says Splitter or SPLITTER, convert it to FSplit before code generation.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Block name (e.g., "B1", "R1", "H1", "F1", "M1")
+        btype:
+          type: str
+          default: Mixer
+          description: >
+            Block type (e.g., Mixer, FSplit, Heater, Flash2, RCSTR,
+            RPlug, RYield, RGibbs, Radfrac, MHeatX).
+            HeatX is an alias and must be normalized to MHeatX.
+            Splitter/SPLITTER is an alias and must be normalized to FSplit.
+      example: |
+        block_add(doc, "B1", "Mixer")
+
+    - name: connect_stream
+      description: >
+        Connect a stream to a block port in Aspen.
+
+        HARD RULES (must follow):
+        - Treat HEATX as an alias of MHEATX in generated code.
+        - For MHEATX (MHeatX): NEVER use "F(IN)" or "P(OUT)".
+          Always use only these ports:
+            "CF(IN)", "CP(OUT)", "HF(IN)", "HP(OUT)".
+        - For most single-in/single-out blocks (PUMP, HEATER, RGIBBS, etc.): use "F(IN)" and "P(OUT)".
+        - For RADFRAC in this workflow: use "F(IN)", "VD(OUT)", "LD(OUT)", "B(OUT)",
+          and optional "SP(OUT)" side-product ports. Do not use "V(OUT)" or "L(OUT)".
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Block ID (e.g., "R-101", "HX1")
+        stream_name:
+          type: str
+          description: Stream ID (e.g., "S1")
+        port_name:
+          type: str
+          description: >
+            Port name string.
+            - Generic blocks: "F(IN)" or "P(OUT)"
+            - MHEATX, HEATX only: "CF(IN)", "CP(OUT)", "HF(IN)", "HP(OUT)"
+            - FLASH2 only: "F(IN)", "V(OUT)", "L(OUT)"
+            - RADFRAC only: "F(IN)", "VD(OUT)", "LD(OUT)", "B(OUT)", optional "SP(OUT)"
+      example: |
+        connect_stream(doc, "P1", "S1", "F(IN)")
+        connect_stream(doc, "P1", "S2", "P(OUT)")
+        connect_stream(doc, "HX1", "S2", "CF(IN)")
+        connect_stream(doc, "HX1", "S3", "CP(OUT)")
+        connect_stream(doc, "HX1", "S4", "HF(IN)")
+        connect_stream(doc, "HX1", "S5", "HP(OUT)")
+        connect_stream(doc, "COL1", "S6", "F(IN)")
+        connect_stream(doc, "COL1", "S7", "LD(OUT)")
+        connect_stream(doc, "COL1", "S8", "B(OUT)")
+
+    
+    - name: delete_stream
+      description: Delete an existing Aspen stream (Material or Heat).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        stream_name:
+          type: str
+          description: Stream ID (e.g., "S1")
+        stype:
+          type: str
+          default: MATERIAL
+          description: Stream type ("MATERIAL" or "HEAT")
+      example: |
+        delete_stream(doc, "S1", "MATERIAL")
+
+    - name: delete_block
+      description: Delete an existing Aspen block.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Block ID (e.g., "B1")
+        btype:
+          type: str
+          default: Mixer
+          description: >
+            Block type (e.g., Mixer, Heater, RCSTR, RPlug,
+            RGibbs, Flash2, Radfrac, Splitter, RYield)
+      example: |
+        delete_block(doc, "B1", "Mixer")
+
+    - name: disconnect_stream
+      description: Disconnect a stream from a block port.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Block ID (e.g., "B1")
+        stream_name:
+          type: str
+          description: Stream ID (e.g., "S1", "FEED1")
+        port_name:
+          type: str
+          description: >
+            Port name string.
+            - Generic blocks: "F(IN)" or "P(OUT)"
+            - MHEATX, HEATX only: "CF(IN)", "CP(OUT)", "HF(IN)", "HP(OUT)"
+            - FLASH2 only: "F(IN)", "V(OUT)", "L(OUT)"
+            - RADFRAC only: "F(IN)", "VD(OUT)", "LD(OUT)", "B(OUT)", optional "SP(OUT)"
+      example: |
+        disconnect_stream(doc, "R-101", "S1", "F(IN)")
+        disconnect_stream(doc, "COL1", "S2", "LD(OUT)")
+
+
+  StreamInput:
+    - name: stream_set_temperature
+      description: Set stream temperature.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        stream_name:
+          type: str
+          description: Stream ID (e.g., "S1")
+        T:
+          type: float
+          description: Temperature (°C by default)
+      example: |
+        stream_set_temperature(doc, "S1", 300)
+
+    - name: stream_set_pressure
+      description: Set stream pressure.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        stream_name:
+          type: str
+          description: Stream ID (e.g., "S1")
+        P:
+          type: float
+          description: Pressure (bar by default)
+      example: |
+        stream_set_pressure(doc, "S1", 1.5)
+
+    - name: stream_set_flow_base
+      description: Set flow basis for a stream ("MOLE" or "MASS").
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        stream_name:
+          type: str
+          description: Stream ID
+        base:
+          type: str
+          description: Flow basis ("MOLE" or "MASS")
+      example: |
+        stream_set_flow_base(doc, "S1", "MOLE")
+
+    - name: stream_set_total_flow
+      description: Set total flow rate for a stream.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        stream_name:
+          type: str
+          description: Stream ID
+        total_flow:
+          type: float
+          description: Flow value
+        base:
+          type: str
+          default: MOLE
+          description: Flow basis
+      example: |
+        stream_set_total_flow(doc, "S1", 100, base="MOLE")
+
+    - name: stream_set_basis
+      description: Set composition basis of a stream.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        stream_name:
+          type: str
+          description: Stream ID
+        basis:
+          type: str
+          description: Composition basis (e.g., MOLE-FRAC, MASS-FRAC, MOLE-FLOW, MASS-FLOW)
+      example: |
+        stream_set_basis(doc, "S1", "MOLE-FRAC")
+
+    - name: stream_set_component_value
+      description: Set a single component value according to the current BASIS.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        stream_name:
+          type: str
+          description: Stream ID
+        component:
+          type: str
+          description: Component ID (e.g., CH4, H2O)
+        value:
+          type: float
+          description: Component value
+      example: |
+        stream_set_component_value(doc, "S1", "CH4", 0.8)
+
+    - name: stream_set_components
+      description: Set multiple component values at once.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        stream_name:
+          type: str
+          description: Stream ID
+        comp_dict:
+          type: dict
+          description: |
+            Mapping of {component: value}, e.g., {"CH4": 0.8, "H2O": 0.2}
+        basis:
+          type: str
+          default: MOLE-FRAC
+          description: Composition basis
+      example: |
+        stream_set_components(doc, "S1", {"CH4": 0.8, "H2O": 0.2}, basis="MOLE-FRAC")
+
+    - name: stream_define
+      description: >
+        Define a new material stream with temperature, pressure,
+        total flow, and composition.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        stream_name:
+          type: str
+          description: Stream ID (e.g., "S1")
+        T:
+          type: float
+          description: Temperature (°C)
+        P:
+          type: float
+          description: Pressure (bar)
+        total_flow:
+          type: float
+          description: Flow rate
+        comp_dict:
+          type: dict
+          description: |
+            Component mapping (e.g., {"CH4": 0.8, "H2O": 0.2})
+        basis:
+          type: str
+          default: MOLE-FRAC
+          description: Composition basis
+      example: |
+        stream_define(
+          doc, "S1",
+          T=300, P=1.5, total_flow=100,
+          comp_dict={"CH4": 0.8, "H2O": 0.2},
+          basis="MOLE-FRAC"
+        )
+
+
+  BlockSplitter:
+    - name: splt_set_frac
+      description: Set split fraction for an outlet stream of a Splitter block.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Splitter block ID (e.g., "SPLT1")
+        outlet_stream:
+          type: str
+          description: Outlet stream ID (e.g., "S2")
+        value:
+          type: float
+          description: Fraction value (0–1)
+      example: |
+        splt_set_frac(doc, "SPLT1", "S2", 0.5)
+
+  BlockFlash:
+    - name: flash_set_spec
+      description: >
+        Set flash specification option (TP, TV, PV, TD, PD, PQ, TQ).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Flash block ID (e.g., "FLASH-101")
+        spec_opt:
+          type: str
+          description: Specification option ("TP","TV","PV","TD","PD","PQ","TQ")
+      example: |
+        flash_set_spec(doc, "FLASH-101", "TP")
+
+    - name: flash_set_temperature
+      description: Set flash block temperature.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Flash block ID
+        T:
+          type: float
+          description: Temperature (°C)
+      example: |
+        flash_set_temperature(doc, "FLASH-101", 350)
+
+    - name: flash_set_pressure
+      description: Set flash block pressure.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Flash block ID
+        P:
+          type: float
+          description: Pressure (bar)
+      example: |
+        flash_set_pressure(doc, "FLASH-101", 5)
+
+    - name: flash_set_duty
+      description: Set flash block heat duty.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Flash block ID
+        Q:
+          type: float
+          description: Heat duty (cal/sec)
+      example: |
+        flash_set_duty(doc, "FLASH-101", 10000)
+
+    - name: flash_set_vapor_frac
+      description: Set flash block vapor fraction.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Flash block ID
+        vfrac:
+          type: float
+          description: Vapor fraction (0–1)
+      example: |
+        flash_set_vapor_frac(doc, "FLASH-101", 0.5)
+
+    - name: flash_config
+      description: >
+        Configure a Flash block with multiple optional settings
+        (spec_opt, T, P, duty, vfrac).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Flash block ID
+        spec_opt:
+          type: str
+          description: Specification option
+        T:
+          type: float
+          description: Temperature (°C)
+        P:
+          type: float
+          description: Pressure (bar)
+        duty:
+          type: float
+          description: Heat duty (cal/sec)
+        vfrac:
+          type: float
+          description: Vapor fraction (0–1)
+      example: |
+        flash_config(doc, "FLASH-101", spec_opt="TP", T=350, P=5)
+
+
+  BlockHeater:
+    - name: heater_set_spec
+      description: >
+        Set specification option for a Heater block.
+        Supported options: TP, TV, TD, TDPPARM, PV, PD, PDT, PDEGSUP,
+        PDEGSUB, VDPPARM, DDPPARM, DTV, DTD, DTDPPARM, DEGSUPDPPARM,
+        DEGSUBDPPARM, PQ, TQ, DTQ, DPPARMQ.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Heater block ID (e.g., "HEAT-101")
+        spec_opt:
+          type: str
+          description: Specification option keyword
+      example: |
+        heater_set_spec(doc, "HEAT-101", "TP")
+
+    - name: heater_set_temperature
+      description: Set Heater block temperature.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Heater block ID
+        T:
+          type: float
+          description: Temperature (°C)
+      example: |
+        heater_set_temperature(doc, "HEAT-101", 350)
+
+    - name: heater_set_pressure
+      description: Set Heater block pressure.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Heater block ID
+        P:
+          type: float
+          description: Pressure (bar)
+      example: |
+        heater_set_pressure(doc, "HEAT-101", 5)
+
+    - name: heater_set_duty
+      description: Set Heater block heat duty.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Heater block ID
+        Q:
+          type: float
+          description: Heat duty (cal/sec)
+      example: |
+        heater_set_duty(doc, "HEAT-101", 10000)
+
+    - name: heater_set_vapor_frac
+      description: Set Heater block vapor fraction.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Heater block ID
+        vfrac:
+          type: float
+          description: Vapor fraction (0–1)
+      example: |
+        heater_set_vapor_frac(doc, "HEAT-101", 0.5)
+
+    - name: heater_config
+      description: >
+        Configure multiple settings for a Heater block.
+        Wrapper for heater_set_spec, heater_set_temperature,
+        heater_set_pressure, heater_set_duty, heater_set_vapor_frac.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Heater block ID
+        spec_opt:
+          type: str
+          description: Specification option
+        T:
+          type: float
+          description: Temperature (°C)
+        P:
+          type: float
+          description: Pressure (bar)
+        duty:
+          type: float
+          description: Heat duty (cal/sec)
+        vfrac:
+          type: float
+          description: Vapor fraction (0–1)
+      example: |
+        heater_config(doc, "HEAT-101", spec_opt="TP", T=350, P=5)
+
+
+  BlockRStoic:
+    - name: rstoic_set_spec
+      description: >
+        Set specification option for an RStoic block.
+        Supported options: TP, TV, PV, TD, PD, PQ, TQ.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RStoic block ID (e.g., "R-101")
+        spec_opt:
+          type: str
+          description: Specification option
+      example: |
+        rstoic_set_spec(doc, "R-101", "TP")
+
+    - name: rstoic_set_temperature
+      description: Set RStoic block temperature.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RStoic block ID
+        T:
+          type: float
+          description: Temperature (°C)
+      example: |
+        rstoic_set_temperature(doc, "R-101", 350)
+
+    - name: rstoic_set_pressure
+      description: Set RStoic block pressure.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RStoic block ID
+        P:
+          type: float
+          description: Pressure (bar)
+      example: |
+        rstoic_set_pressure(doc, "R-101", 5)
+
+    - name: rstoic_set_duty
+      description: Set RStoic block heat duty.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RStoic block ID
+        Q:
+          type: float
+          description: Heat duty (cal/sec)
+      example: |
+        rstoic_set_duty(doc, "R-101", 10000)
+
+    - name: rstoic_set_vapor_frac
+      description: Set RStoic block vapor fraction.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RStoic block ID
+        vfrac:
+          type: float
+          description: Vapor fraction (0–1)
+      example: |
+        rstoic_set_vapor_frac(doc, "R-101", 0.5)
+
+    - name: rstoic_config
+      description: >
+        Configure multiple settings for an RStoic block
+        (spec_opt, T, P, duty).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RStoic block ID
+        spec_opt:
+          type: str
+          description: Specification option
+        T:
+          type: float
+          description: Temperature (°C)
+        P:
+          type: float
+          description: Pressure (bar)
+        duty:
+          type: float
+          description: Heat duty (cal/sec)
+      example: |
+        rstoic_config(doc, "R-101", spec_opt="TP", T=350, P=5, duty=10000)
+
+
+  BlockRGibbs:
+    - name: rgibbs_set_opt_chemeq
+      description: >
+        Set RGibbs chemical equilibrium option (OPT_CHEMEQ).
+        Options: PHASE-ONLY, PHASE-CHEM (default), RESTRICT, CALC-TAPP.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RGibbs block ID
+        mode:
+          type: str
+          default: PHASE-CHEM
+          description: Equilibrium mode
+      example: |
+        rgibbs_set_opt_chemeq(doc, "RGIBBS-101", "PHASE-ONLY")
+
+    - name: rgibbs_set_spec
+      description: >
+        Set RGibbs specification option. Allowed: TEMP, DUTY.
+        Pressure must always be defined separately.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RGibbs block ID
+        spec_opt:
+          type: str
+          description: Specification option
+      example: |
+        rgibbs_set_spec(doc, "RGIBBS-101", "TEMP")
+
+    - name: rgibbs_set_temperature
+      description: Set RGibbs block temperature.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RGibbs block ID
+        T:
+          type: float
+          description: Temperature (°C)
+      example: |
+        rgibbs_set_temperature(doc, "RGIBBS-101", 800)
+
+    - name: rgibbs_set_pressure
+      description: >
+        Set RGibbs block pressure.
+        Note: Pressure is required for Gibbs reactor.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RGibbs block ID
+        P:
+          type: float
+          description: Pressure (bar)
+      example: |
+        rgibbs_set_pressure(doc, "RGIBBS-101", 10)
+
+    - name: rgibbs_set_duty
+      description: Set RGibbs block heat duty.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RGibbs block ID
+        Q:
+          type: float
+          description: Heat duty (cal/sec)
+      example: |
+        rgibbs_set_duty(doc, "RGIBBS-101", 20000)
+
+    - name: rgibbs_set_reactant_coef
+      description: >
+        Set stoichiometric coefficient for a reactant (negative value).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RGibbs block ID
+        rxn_idx:
+          type: int
+          description: Reaction index
+        comp:
+          type: str
+          description: Component ID
+        value_neg:
+          type: float
+          description: Negative stoichiometric coefficient
+      example: |
+        rgibbs_set_reactant_coef(doc, "RGIBBS-101", 1, "CH4", -1)
+
+    - name: rgibbs_set_product_coef
+      description: >
+        Set stoichiometric coefficient for a product (positive value).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RGibbs block ID
+        rxn_idx:
+          type: int
+          description: Reaction index
+        comp:
+          type: str
+          description: Component ID
+        value_pos:
+          type: float
+          description: Positive stoichiometric coefficient
+      example: |
+        rgibbs_set_product_coef(doc, "RGIBBS-101", 1, "H2", 3)
+
+    - name: rgibbs_define_reaction
+      description: >
+        Define reaction stoichiometry from a dictionary.
+        Negative = reactant, Positive = product.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RGibbs block ID
+        rxn_idx:
+          type: int
+          description: Reaction index
+        stoich_dict:
+          type: dict
+          description: |
+            Mapping of {component: coeff}}
+      example: |
+        rgibbs_define_reaction(
+          doc, "RGIBBS-101", 1,
+          {"CH4": -1, "H2O": -1, "H2": 3, "CO": 1}
+        )
+
+    - name: rgibbs_config
+      description: >
+        Configure multiple settings for an RGibbs block.
+        Wrapper for opt_chemeq, spec_opt, T, P, duty.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RGibbs block ID
+        opt_chemeq:
+          type: str
+          description: Equilibrium option
+        spec_opt:
+          type: str
+          description: Specification option (TEMP or DUTY)
+        T:
+          type: float
+          description: Temperature (°C)
+        P:
+          type: float
+          description: Pressure (bar)
+        duty:
+          type: float
+          description: Heat duty (cal/sec)
+      example: |
+        rgibbs_config(
+          doc, "RGIBBS-101",
+          opt_chemeq="PHASE-CHEM", spec_opt="TEMP", T=800, P=10
+        )
+
+
+  BlockRPlug:
+    - name: rplug_set_type
+      description: >
+        Set RPlug reactor type option (TYPE).
+        Options: T-SPEC, ADIABATIC, TCOOL-SPEC, CO-COOL, COUNTER-COOL,
+        TCOOL-PROF, QFLUX-PROF.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        type_opt:
+          type: str
+          description: Reactor type
+      example: |
+        rplug_set_type(doc, "RPLUG-101", "ADIABATIC")
+
+    - name: rplug_set_opt_tspec
+      description: >
+        Set OPT_TSPEC (valid when TYPE = T-SPEC).
+        Options: INLET-TEMP, CONST-TEMP, TEMP-PROF.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        opt:
+          type: str
+          description: T-SPEC option
+      example: |
+        rplug_set_opt_tspec(doc, "RPLUG-101", "CONST-TEMP")
+
+    - name: rplug_set_reactor_temp
+      description: Set reactor temperature (for TYPE = T-SPEC).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        T:
+          type: float
+          description: Reactor temperature (°C)
+      example: |
+        rplug_set_reactor_temp(doc, "RPLUG-101", 550)
+
+    - name: rplug_set_temp_profile
+      description: >
+        Set temperature profile at a given location index (for TEMP-PROF).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        loc_index:
+          type: int
+          description: Location index (0
+        T:
+          type: float
+          description: Temperature at location (°C)
+      example: |
+        rplug_set_temp_profile(doc, "RPLUG-101", 0, 500)
+
+    - name: rplug_set_multitube
+      description: Enable or disable multitube option (YES/NO).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        yesno:
+          type: str
+          default: NO
+          description: YES or NO
+      example: |
+        rplug_set_multitube(doc, "RPLUG-101", "YES")
+
+    - name: rplug_set_ntube
+      description: Set number of tubes in multitube RPlug reactor.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        n:
+          type: int
+          description: Number of tubes
+      example: |
+        rplug_set_ntube(doc, "RPLUG-101", 100)
+
+    - name: rplug_set_length
+      description: Set RPlug reactor length.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        length:
+          type: float
+          description: Reactor length (m)
+      example: |
+        rplug_set_length(doc, "RPLUG-101", 10.0)
+
+    - name: rplug_set_diameter
+      description: Set RPlug reactor diameter.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        diam:
+          type: float
+          description: Reactor diameter (m)
+      example: |
+        rplug_set_diameter(doc, "RPLUG-101", 2.0)
+
+    - name: rplug_set_phase
+      description: >
+        Set reactor phases.
+        Example: (1,"V") → vapor; (1,"L") → liquid; (2,None) → vapor-liquid.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        nphase:
+          type: int
+          description: Number of phases (1–3)
+        phase_opt:
+          type: str
+          description: Phase option ("V"
+      example: |
+        rplug_set_phase(doc, "RPLUG-101", 2, "")
+
+    - name: rplug_set_pressure
+      description: Set reactor operating pressure.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        P:
+          type: float
+          description: Pressure (bar)
+      example: |
+        rplug_set_pressure(doc, "RPLUG-101", 20)
+
+    - name: rplug_set_pressure_drop
+      description: Set pressure drop across the reactor.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        dP:
+          type: float
+          description: Pressure drop (bar)
+      example: |
+        rplug_set_pressure_drop(doc, "RPLUG-101", 0.5)
+
+    - name: rplug_set_catalyst_presence
+      description: Enable or disable catalyst presence (YES/NO).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        yesno:
+          type: str
+          default: NO
+          description: YES or NO
+      example: |
+        rplug_set_catalyst_presence(doc, "RPLUG-101", "YES")
+
+    - name: rplug_set_catalyst_props
+      description: >
+        Set catalyst properties (weight, density, bed voidage).
+        If a value is None, it is skipped.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: RPlug block ID
+        catwt:
+          type: float
+          description: Catalyst weight
+        cat_rho:
+          type: float
+          description: Catalyst density
+        bed_voidage:
+          type: float
+          description: Bed void fraction
+      example: |
+        rplug_set_catalyst_props(
+          doc, "RPLUG-101",
+          catwt=200, cat_rho=10, bed_voidage=0.4
+        )
+
+
+  BlockPump:
+    - name: pump_set_type
+      description: Set pump type
+      default: PUMP
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Pump block ID
+        pump_type:
+          type: str
+          default: PUMP
+          description: Pump type
+      example: |
+        pump_set_type(doc, "PUMP-101", "PUMP")
+
+    - name: pump_set_spec
+      description: >
+        Set pump specification option and value.
+        Options: PRES, DELP, POWER.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Pump block ID
+        opt_spec:
+          type: str
+          default: PRES
+          description: Specification option
+        value:
+          type: float
+          description: Value for spec option
+      example: |
+        pump_set_spec(doc, "PUMP-101", "DELP", 2.0)
+
+    - name: pump_set_eff
+      description: Set pump efficiency and driver efficiency.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Pump block ID
+        eff:
+          type: float
+          description: Pump efficiency (EFF)
+        deff:
+          type: float
+          description: Driver efficiency (DEFF)
+      example: |
+        pump_set_eff(doc, "PUMP-101", eff=0.75, deff=0.9)
+
+    - name: pump_set_nphase
+      description: Set number of phases for the pump.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Pump block ID
+        nphase:
+          type: int
+          default: 1
+          description: Number of phases
+      example: |
+        pump_set_nphase(doc, "PUMP-101", 1)
+
+    - name: pump_configure
+      description: >
+        Configure a pump block with multiple settings.
+        Wrapper for pump_set_type, pump_set_spec, pump_set_eff, pump_set_nphase.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Pump block ID
+        pump_type:
+          type: str
+          default: PUMP
+          description: Pump type
+        spec:
+          type: str
+          default: PRES
+          description: Specification option
+        value:
+          type: float
+          description: Value for spec option
+        eff:
+          type: float
+          description: Pump efficiency (EFF)
+        deff:
+          type: float
+          description: Driver efficiency (DEFF)
+        nphase:
+          type: int
+          default: 1
+          description: Number of phases
+      example: |
+        pump_configure(doc, "PUMP-101", spec="PRES", value=5, eff=0.8, deff=0.9)
+
+
+  BlockCompressor:
+    - name: comp_set_model_type
+      description: |
+        Set compressor model type (default: COMPRESSOR).
+        Use Aspen symbol values only.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Compressor block ID from diagnosis/fix_plan (not example IDs)
+        model_type:
+          type: str
+          default: COMPRESSOR
+          allowed_values: [COMPRESSOR]
+          description: Aspen symbol for model type. "COMPR" is invalid.
+      constraints:
+        - Do not use block/model labels (e.g., COMPR) as symbol values.
+      example: |
+        comp_set_model_type(doc, "B1", "COMPRESSOR")
+
+    - name: comp_set_type
+      description: Set compressor calculation type (e.g., ISENTROPIC).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Compressor block ID
+        comp_type:
+          type: str
+          default: ISENTROPIC
+          description: Calculation type
+      example: |
+        comp_set_type(doc, "COMP-101", "ISENTROPIC")
+
+    - name: comp_set_spec
+      description: >
+        Set compressor specification option and value.
+        Options: PRES, DELP, POWER.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Compressor block ID
+        opt_spec:
+          type: str
+          default: PRES
+          description: Specification option
+        value:
+          type: float
+          description: Value for spec option
+      example: |
+        comp_set_spec(doc, "COMP-101", "PRES", 3.0)
+
+    - name: comp_set_eff
+      description: >
+        Set compressor efficiency values: isentropic (SEFF),
+        polytropic (PEFF), mechanical (MEFF).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Compressor block ID
+        seff:
+          type: float
+          description: Isentropic efficiency
+        peff:
+          type: float
+          description: Polytropic efficiency
+        meff:
+          type: float
+          description: Mechanical efficiency
+      example: |
+        comp_set_eff(doc, "COMP-101", seff=0.8, peff=0.85, meff=0.9)
+
+    - name: comp_set_nphase
+      description: Set number of phases for the compressor.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Compressor block ID
+        nphase:
+          type: int
+          default: 1
+          description: Number of phases
+      example: |
+        comp_set_nphase(doc, "COMP-101", 1)
+
+    - name: comp_configure
+      description: >
+        Configure a compressor block with multiple settings.
+        Wrapper for comp_set_model_type, comp_set_type,
+        comp_set_spec, comp_set_eff, comp_set_nphase.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Compressor block ID
+        model_type:
+          type: str
+          default: COMPRESSOR
+          description: Model type
+        comp_type:
+          type: str
+          default: ISENTROPIC
+          description: Calculation type
+        spec:
+          type: str
+          default: PRES
+          description: Specification option
+        value:
+          type: float
+          description: Value for spec option
+        seff:
+          type: float
+          description: Isentropic efficiency
+        peff:
+          type: float
+          description: Polytropic efficiency
+        meff:
+          type: float
+          description: Mechanical efficiency
+        nphase:
+          type: int
+          default: 1
+          description: Number of phases
+      example: |
+        comp_configure(
+          doc, "COMP-101",
+          comp_type="ISENTROPIC", spec="PRATIO", value=3.0,
+          seff=0.8, peff=0.85, meff=0.9
+        )
+
+
+  BlockMHeatX:
+    - name: mheatx_set_outlet_stream
+      description: >
+        Connect an outlet stream for an MHeatX block.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: MHeatX block ID
+        in_stream:
+          type: str
+          description: Inlet stream name
+        out_stream:
+          type: str
+          description: Outlet stream name
+      example: |
+        mheatx_set_outlet_stream(doc, "HX-101", "FEED", "FEED-OUT")
+
+    - name: mheatx_set_spec
+      description: >
+        Set MHeatX specification option for a given inlet stream.
+        Options: TEMP, VFRAC, DELT, DEGSUP, DEGSUB,
+        DUTY, MOLAR-Q, MASS-Q, QFRAC.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: MHeatX block ID
+        in_stream:
+          type: str
+          description: Inlet stream name
+        spec:
+          type: str
+          default: TEMP
+          description: Specification option
+      example: |
+        mheatx_set_spec(doc, "HX-101", "FEED", "TEMP")
+
+    - name: mheatx_set_value
+      description: >
+        Set numeric value corresponding to the selected specification.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: MHeatX block ID
+        in_stream:
+          type: str
+          description: Inlet stream name
+        value:
+          type: float
+          description: Numeric value for spec option
+      example: |
+        mheatx_set_value(doc, "HX-101", "FEED", 350)
+
+    - name: mheatx_configure
+      description: >
+        Configure an MHeatX block with multiple settings.
+        Wrapper for mheatx_set_outlet_stream, mheatx_set_spec, mheatx_set_value.
+        For N connected inlet/outlet pairs, set exactly N-1 specifications.
+        When scalar spec/value are provided, they are applied only to the first
+        N-1 inlet streams after all outlet mappings are connected. Use dict
+        values keyed by in_stream only when explicit per-stream specs are needed.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: MHeatX block ID
+        outlet_streams:
+          type: dict
+          description: |
+            Mapping of {in_stream: out_stream}
+        spec:
+          type: str
+          description: "Specification option, or dict keyed by in_stream."
+        value:
+          type: float
+          description: "Numeric value for the spec option, or dict keyed by in_stream."
+      example: |
+        mheatx_configure(
+          doc, "HX-101",
+          outlet_streams={"FEED": "FEED-OUT", "COOL": "COOL-OUT"},
+          spec="TEMP", value=350
+        )
+
+
+  BlockRadfrac:
+    - name: radfrac_set_calc_mode
+      description: >
+        Set calculation mode for Radfrac.
+        Options: EQUILIBRIUM (default), RIG-RATE.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Radfrac block ID
+        mode:
+          type: str
+          default: EQUILIBRIUM
+          description: Calculation mode
+      example: |
+        radfrac_set_calc_mode(doc, "COL-101", "RIG-RATE")
+
+    - name: radfrac_set_nstage
+      description: Set number of stages in Radfrac column.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Radfrac block ID
+        nstage:
+          type: int
+          description: Number of stages
+      example: |
+        radfrac_set_nstage(doc, "COL-101", 20)
+
+    - name: radfrac_set_condenser
+      description: >
+        Set condenser type.
+        Options: NONE, TOTAL (default), PARTIAL-V, PARTIAL-V-L.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Radfrac block ID
+        condenser:
+          type: str
+          default: TOTAL
+          description: Condenser type
+      example: |
+        radfrac_set_condenser(doc, "COL-101", "TOTAL")
+
+    - name: radfrac_set_reboiler
+      description: >
+        Set reboiler type.
+        Options: NONE, KETTLE (default), THERMOSIPHON.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Radfrac block ID
+        reboiler:
+          type: str
+          default: KETTLE
+          description: Reboiler type
+      example: |
+        radfrac_set_reboiler(doc, "COL-101", "KETTLE")
+
+    - name: radfrac_set_no_phase
+      description: >
+        Set phase option.
+        Typically "2" for vapor-liquid (default).
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Radfrac block ID
+        no_phase:
+          type: str
+          default: "2"
+          description: Phase option
+      example: |
+        radfrac_set_no_phase(doc, "COL-101", "2")
+
+    - name: radfrac_set_spec
+      description: >
+        Set Radfrac operating specification.
+        Common spec names: BASIS_D, BASIS_B, BASIS_L1, BASIS_RR,
+        BASIS_VN, BASIS_BR, D:F, B:F, Q1, QN.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Radfrac block ID
+        spec_name:
+          type: str
+          description: Specification keyword
+        value:
+          type: float | str
+          description: Spec value
+      example: |
+        radfrac_set_spec(doc, "COL-101", "D:F", 0.95)
+
+    - name: radfrac_set_feed_stage
+      description: >
+        Assign a feed stream to a specific stage.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Radfrac block ID
+        stream_name:
+          type: str
+          description: Feed stream ID
+        stage:
+          type: int
+          description: Stage number (1-based)
+      example: |
+        radfrac_set_feed_stage(doc, "COL-101", "FEED1", 5)
+
+    - name: radfrac_set_stage_pressure
+      description: >
+        Set pressure at a specific stage.
+        Stage 1 → PRES1, Stage 2 → PRES2, etc.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Radfrac block ID
+        stage:
+          type: int
+          description: Stage number (1-based)
+        pressure:
+          type: float
+          description: Pressure value (bar)
+      example: |
+        radfrac_set_stage_pressure(doc, "COL-101", 1, 1.0)
+
+    - name: radfrac_configure
+      description: >
+        Configure a Radfrac block with multiple settings.
+        Wrapper for calc_mode, nstage, condenser, reboiler, no_phase,
+        specs, feed_stages, and stage_pressures.
+      args:
+        doc:
+          type: object
+          description: Aspen COM document object
+        block_name:
+          type: str
+          description: Radfrac block ID
+        calc_mode:
+          type: str
+          default: EQUILIBRIUM
+          description: Calculation mode
+        nstage:
+          type: int
+          description: Number of stages
+        condenser:
+          type: str
+          description: Condenser type
+        reboiler:
+          type: str
+          description: Reboiler type
+        no_phase:
+          type: str
+          default: "2"
+          description: Phase option
+        specs:
+          type: dict
+          description: |
+            Dict of {spec_name: value}
+        feed_stages:
+          type: dict
+          description: |
+            Dict of {stream_name: stage}
+        stage_pressures:
+          type: dict
+          description: |
+            Dict of {stage: pressure}
+      example: |
+        radfrac_configure(
+          doc, "COL-101",
+          calc_mode="EQUILIBRIUM",
+          nstage=20,
+          condenser="TOTAL",
+          reboiler="KETTLE",
+          no_phase="2",
+          specs={"D:F": 0.95},
+          feed_stages={"FEED1": 5, "FEED2": 10},
+          stage_pressures={1: 1.0, 10: 1.2}
+        )

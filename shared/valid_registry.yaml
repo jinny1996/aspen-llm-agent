@@ -1,0 +1,128 @@
+# valid_registry.yaml
+version: 1
+description: >
+  Validator registry for Aspen Plus COM-based workflow.
+  LLM/orchestrator reads this file to decide which validator(s) to run.
+
+# ------------------------------------------------------------
+# Execution order guidance (optional but useful)
+# ------------------------------------------------------------
+pipeline:
+  default_sequence:
+    - connectivity
+    - feeds
+    - block_specs
+
+# ------------------------------------------------------------
+# Validators
+# ------------------------------------------------------------
+validators:
+
+  # ==========================================================
+  # 1) Connectivity (Block-Stream connection)
+  # ==========================================================
+  connectivity:
+    id: connectivity
+    name: Block-Stream Connectivity Validator
+    purpose: >
+      Check whether each block has required inlet/outlet stream connections
+      based on block type (BLKTYPE) and port candidates.
+    entrypoint: "validator.connectivity.check:run"   # module:function
+    inputs:
+      required:
+        - doc  # Aspen Document COM handle
+      optional:
+        - blocks  # if omitted, auto-detect from \Data\Blocks
+        - rules_path
+        - print_report
+    outputs:
+      type: dict
+      keys:
+        - ok
+        - summary
+        - issues
+        - results
+    rules:
+      kind: yaml
+      base_dir: "."
+      path_default: "valid_connectivity rules.yaml"
+    triggers:
+      - when: "always"
+        rationale: "Connectivity is the first sanity check; downstream validation depends on it."
+
+  # ==========================================================
+  # 2) Feeds (Detect feed/product + feed input completeness)
+  # ==========================================================
+  feeds:
+    id: feeds
+    name: Feed Stream Validator
+    purpose: >
+      Identify system FEED/PRODUCT streams and validate FEED streams have
+      required inputs (T, P, Composition/Flow).
+    entrypoint: "validator.feeds.check:run"
+    inputs:
+      required:
+        - doc
+      optional:
+        - tol_sum
+        - print_report
+        - rules_path
+    outputs:
+      type: dict
+      keys:
+        - ok
+        - summary
+        - feeds
+        - products
+        - issues
+        - results
+    rules:
+      kind: yaml
+      base_dir: "."
+      path_default: "valid_feed_rules.yaml"
+    triggers:
+      - depends_on: [connectivity]
+        rationale: "Feed detection/validation should follow a connectivity pass."
+
+  # ==========================================================
+  # 3) Block Specifications (per block type required specs)
+  # ==========================================================
+  block_specs:
+    id: block_specs
+    name: Block Specification Validator
+    purpose: >
+      Validate required specification inputs per block model/type
+      (e.g., FLASH2 SPEC_OPT + required fields, HEATER options, MHEATX rules, RPLUG settings).
+    entrypoint: "validator.block_specs.check:run"
+    inputs:
+      required:
+        - doc
+      optional:
+        - blocks
+        - print_report
+        - rules_path
+    outputs:
+      type: dict
+      keys:
+        - ok
+        - summary
+        - issues
+        - results
+    rules:
+      kind: yaml
+      base_dir: "."
+      path_default: "valid_block_rules.yaml"
+    triggers:
+      - depends_on: [connectivity]
+        rationale: "Block spec checks require block types/structure to be accessible."
+
+# ------------------------------------------------------------
+# Shared conventions for issues/results (recommended)
+# ------------------------------------------------------------
+conventions:
+  issue_object_schema:
+    required_keys: [category, id, message]
+    optional_keys: [block, stream, path, current, required, hint, detail]
+  summary_schema:
+    required_keys: [n_issues]
+    optional_keys: [n_blocks, n_streams, n_feeds, n_products]
