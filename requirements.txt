@@ -4,7 +4,7 @@ PyYAML>=6.0
 typing_extensions>=4.0
 langchain-core>=0.3
 langchain-openai>=0.3
-mcp>=1.0
+mcp>=1.0,<2   # the server uses the 1.x decorator API (@server.list_tools); 2.x removed it
 gradio>=6.0
 # Aspen Plus COM automation (Part 2/3) - Windows only, needs a licensed Aspen Plus install
 pywin32>=306; sys_platform == "win32"
