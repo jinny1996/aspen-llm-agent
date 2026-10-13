@@ -2,6 +2,7 @@
 import unittest
 
 import part1_stage_functions as p1
+from paths import shared_file
 
 
 class MappingSpecs(unittest.TestCase):
@@ -29,7 +30,7 @@ class MappingSpecs(unittest.TestCase):
         if not run.exists():
             self.skipTest("real F run not present")
         schema = yaml.safe_load(run.read_text(encoding="utf-8"))
-        layer = yaml.safe_load((Path(__file__).parent.parent.parent / "2608 수정" / "Schema_v5.yaml").read_text(encoding="utf-8"))
+        layer = yaml.safe_load(shared_file("Schema_v5.yaml").read_text(encoding="utf-8"))
         missing = [t["id"] for t in p1.validate_schema_for_execution(schema, layer)]
         self.assertNotIn("block_B13_split_fractions", missing)
 

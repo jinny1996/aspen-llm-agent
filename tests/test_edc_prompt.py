@@ -10,7 +10,9 @@ import edc_prompt as epr
 import part1_stage_functions as p1
 
 HERE = Path(__file__).resolve().parent
-SCHEMA_LAYER = HERE.parent.parent / "2608 수정" / "Schema_v5.yaml"
+from paths import shared_file
+
+SCHEMA_LAYER = shared_file("Schema_v5.yaml")
 
 
 class _Stop(Exception):

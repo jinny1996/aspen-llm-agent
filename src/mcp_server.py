@@ -785,18 +785,14 @@ async def run_server() -> None:
 
 
 def smoke_test() -> None:
-    here = Path(__file__).resolve().parent
-    # Shared sample data (Schema_v5.yaml, jinny_DB, aspen_code_v3.yaml) lives
-    # under the old "2608 수정" project root, not next to this file -- unlike
-    # phase5, this phase folder was deliberately moved under a separate
-    # "2609 수정" tree (2026-09-02) while the shared data stayed put. This is
-    # only a diagnostic smoke test; real tool calls always get absolute paths
-    # from their caller, so this hardcoding doesn't affect production use.
-    root = Path(r"C:\Users\USER\Desktop\3. LLM (2601)\2608 수정")
+    # Diagnostic only: reads sample data from the shared data directory (see paths.py).
+    # Real tool calls always receive absolute paths from their caller.
+    from paths import data_dir, papers_dir, shared_file
+    root = data_dir()
 
     # --- Part1 ---
-    schema_path = root / "Schema_v5.yaml"
-    paper_path = root / "jinny_DB" / "parsed" / "paper2" / "paper_h2.md"
+    schema_path = shared_file("Schema_v5.yaml")
+    paper_path = papers_dir() / "paper2" / "paper_h2.md"
     print(json.dumps(paper_context_tool(str(paper_path), max_chars=200), ensure_ascii=False, indent=2))
     print(json.dumps(image_context_tool(str(paper_path.parent), str(paper_path.parent / "*.jpg"), 4), ensure_ascii=False, indent=2))
     rules = schema_rule_tool(str(schema_path))
@@ -810,7 +806,7 @@ def smoke_test() -> None:
     print(json.dumps(schema_validation_tool(minimal_schema, schema_layer_path=str(schema_path)), ensure_ascii=False, indent=2))
 
     # --- Part2 ---
-    db_com_path = root / "aspen_code_v3.yaml"
+    db_com_path = shared_file("aspen_code_v3.yaml")
     print(json.dumps(part2_config_tool({"schema_input_path": str(schema_path), "working_dir": str(root / "run(test)")}), ensure_ascii=False, indent=2))
     print(json.dumps(schema_context_tool(schema_path=str(schema_path), phase="connectivity"), ensure_ascii=False, indent=2)[:2500])
     print(json.dumps(com_catalog_tool(str(db_com_path), phase="feeds"), ensure_ascii=False, indent=2)[:2500])

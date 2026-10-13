@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-P13 = HERE / "part2_stage_functions.py"
+P13 = Path(__file__).resolve().parent.parent / "src" / "part2_stage_functions.py"
 P12 = HERE.parent / "phase12" / "part2_stage_functions.py"
 
 _NEEDED = ("_to_float_or_none", "_norm", "_get_component_list", "_iter_feeds",

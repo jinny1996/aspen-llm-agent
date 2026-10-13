@@ -12,7 +12,7 @@ assumption ledger / final summary, so nothing becomes invisible.
   R3 validator      values the semantic validator found supported by the text (DIRECT / PROCESS_LEVEL) are not
                     asked; values it found borrowed from another equipment are asked first.
 
-Developed on cases A and C (see gold_A_draft.yaml); NOT validated on held-out papers.
+Developed on cases A and C; NOT validated on held-out papers.
 """
 from __future__ import annotations
 

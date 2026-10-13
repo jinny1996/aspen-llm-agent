@@ -1,0 +1,9 @@
+.env
+*.bkp
+*.apw*
+*.his
+*.inp
+run/
+__pycache__/
+jinny_DB/
+data/

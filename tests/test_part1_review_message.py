@@ -1,4 +1,5 @@
 """EDC-2b: the schema-review question must show WHAT is being approved, and nothing else changes."""
+from paths import SRC_DIR
 import json
 import unittest
 from pathlib import Path
@@ -9,7 +10,7 @@ import part1_stage_functions as p1
 from agent_loop_utils import HumanInputRequired
 
 HERE = Path(__file__).resolve().parent
-REAL_RUN = HERE / "run" / "attempt_chat_20261006_220801" / "part1"
+REAL_RUN = SRC_DIR / "run" / "attempt_chat_20261006_220801" / "part1"
 
 SCHEMA = {
     "flowsheet_schema": {"blocks": [

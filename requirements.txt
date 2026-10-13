@@ -1,0 +1,12 @@
+# Versions below are the ones this code was developed and tested with (Python 3.11, Windows).
+python-dotenv>=1.0
+PyYAML>=6.0
+typing_extensions>=4.0
+langchain-core>=0.3
+langchain-openai>=0.3
+mcp>=1.0
+gradio>=6.0
+# Aspen Plus COM automation (Part 2/3) - Windows only, needs a licensed Aspen Plus install
+pywin32>=306; sys_platform == "win32"
+# Optional: web search used by the Part 3 error-diagnosis step when TAVILY_API_KEY is set
+# tavily-python

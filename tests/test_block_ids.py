@@ -1,4 +1,5 @@
 """Block IDs are kept short for Aspen (MHeatX helper blocks are named "$<id>HTR")."""
+from paths import SRC_DIR
 import copy
 import tempfile
 import unittest
@@ -10,7 +11,7 @@ import block_ids as bi
 import part1_stage_functions as p1
 
 HERE = Path(__file__).resolve().parent
-REAL_DRAFT = HERE / "run" / "attempt_chat_20261007_232130" / "part1" / "Schema_proto_draft.yaml"
+REAL_DRAFT = SRC_DIR / "run" / "attempt_chat_20261007_232130" / "part1" / "Schema_proto_draft.yaml"
 
 
 def sch(ids):

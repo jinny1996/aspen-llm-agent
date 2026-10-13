@@ -77,14 +77,16 @@ from agent_loop_utils import HumanInputRequired
 from experiment_logging import token_usage
 from part3_patch_safety import _walk_catalog_items, filter_catalog_by_functions, build_fn_index, safety_check_patchplan
 
+from paths import data_dir, shared_dirs, shared_file
+
 _HERE = Path(__file__).resolve().parent
-_PROJECT_ROOT = Path(r"C:\Users\USER\Desktop\3. LLM (2601)\2608 수정")
-for _p in (_PROJECT_ROOT, _HERE):
+_PROJECT_ROOT = data_dir()
+for _p in (*shared_dirs(), _HERE):
     _p_str = str(_p)
     if _p_str not in sys.path:
         sys.path.insert(0, _p_str)
 
-# aspen_code_v1.py / valid_*.py live at _PROJECT_ROOT -- must be importable
+# aspen_code_v1.py / valid_*.py live in the shared dirs (paths.shared_dirs()) -- must be importable
 # before these run. importlib.reload() calls the notebook made right after
 # each `import ... as _x_repair_mod` (cells 24) are dropped here: they were
 # always a no-op in that position (nothing could invalidate the cache between
@@ -104,7 +106,7 @@ from valid_block_schema_repair import repair_block_specs_from_schema
 
 
 # ---------------------------------------------------------------------------
-# phase13 fix: mass-basis total flow was silently entered as kmol/hr.
+# fix: mass-basis total flow was silently entered as kmol/hr.
 #
 # aspen_code_v1.stream_set_total_flow() ignores its `base` argument and only does
 # `node.Value = total_flow`, so the number lands in the node's current unit (kmol/hr).
@@ -142,7 +144,7 @@ def stream_set_total_flow(doc, stream_name, total_flow, base="MOLE"):
 import aspen_code_v1 as _aspen_code_v1_mod
 _aspen_code_v1_mod.stream_set_total_flow = stream_set_total_flow   # helpers inside that module use it too
 
-# phase14: the schema block type COMPRESSOR is not an Aspen block type (Aspen rejects block_add(..., "COMPRESSOR") with
+# the schema block type COMPRESSOR is not an Aspen block type (Aspen rejects block_add(..., "COMPRESSOR") with
 # "Invalid Block/Model/Library Specification"; verified on this PC with test_aspen_block_types.py: Compr / COMPR / MCompr are
 # accepted, Compressor / COMPRESSOR are not).  "COMPRESSOR" stays the right value of the block's MODEL_TYPE option, which
 # comp_set_model_type sets after the block exists.  Defined here, not in the shared aspen_code_v1.py (see the note above).
@@ -164,7 +166,7 @@ _valid_feed_schema_repair_mod.stream_set_total_flow = stream_set_total_flow
 
 
 # ---------------------------------------------------------------------------
-# EDC-2d: post-build read-back of the feed total-flow unit.
+# post-build read-back of the feed total-flow unit.
 # The unit bug above passed every validator because they only look at "is a value present".
 # This compares the unit FAMILY (mass vs mole) that Aspen actually holds with the schema's flow
 # basis.  A mismatch is corrected once with the fixed setter and re-read; if it still differs it
@@ -261,7 +263,7 @@ def _with_feed_unit_check(doc, result: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ===========================================================================
-# Module-level shared state (item 2 in the plan -- see module docstring).
+# Module-level shared state.
 # Defaults here matter only for a pre-build_session() import; build_session()
 # always overwrites them for a real run, and _reset_module_state() clears
 # them at the start of every build_session() call (a fresh notebook kernel
@@ -364,7 +366,7 @@ def mcp_client_tool_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str,
         return mcp_tool_result(tool_name, ok=False, error=f"MCP helper script not found: {helper_path}", mode="mcp_client")
     args_path = Path(working_dir) / f"part2_mcp_args_{tool_name}.json"
     out_path = Path(working_dir) / f"part2_mcp_out_{tool_name}.json"
-    # Root-caused (2026-09-01, file-based child-side trace instrumentation): the
+    # Root-caused: the
     # child process always completes and flushes its stdout print successfully,
     # but the parent's subprocess.run(capture_output=True) intermittently lost
     # the piped stdout anyway for some tools when spawned from inside a busy
@@ -386,7 +388,7 @@ def mcp_client_tool_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str,
                 cwd=str(_HERE.parent),
                 env={**os.environ, "PYTHONUNBUFFERED": "1"},
                 text=True,
-                encoding="utf-8",  # 2026-09-01 (item 3 merge verification): without this,
+                encoding="utf-8",  # without this,
                 # subprocess.run() decodes the child's stdout/stderr with
                 # locale.getpreferredencoding() (cp949 on this Korean Windows
                 # setup), which raises UnicodeDecodeError on non-ASCII bytes
@@ -1084,7 +1086,7 @@ def _generate_inp_skeleton() -> None:
             if key in seen:
                 continue
             seen.add(key)
-            # phase14: the component ID (first token of a COMPONENTS line) must be the same string the generated COM code uses
+            # the component ID (first token of a COMPONENTS line) must be the same string the generated COM code uses
             # for stream compositions and the reaction / block specs, i.e. the resolved alias.  The shared format puts the
             # FORMULA first ("C7H14 C7H14-6 /"), which is harmless while formula == alias (CH4, H2, H2O ...) but made
             # stream_set_components(doc, "S1", {"C7H14-6": 1.0, ...}) fail for methylcyclohexane (no such component ID).
@@ -1418,7 +1420,7 @@ def _build_com_action_plan() -> None:
                     picked = alias_by_key[k]
                     break
             if picked:
-                # phase13 fix: remember the ORIGINAL aspen_id before overwriting it.  The feed
+                # fix: remember the ORIGINAL aspen_id before overwriting it. The feed
                 # compositions (z) are keyed by that original id; without this, an id that is not
                 # also a resolved_name (e.g. 'CARBON' for solid carbon, resolved to 'C') stayed
                 # unmapped in z and the generated stream_set_components used a component that
@@ -2353,8 +2355,8 @@ def _generate_com_skeleton_code() -> None:
     com_code = (header + "\n\n" + body).strip() + "\n"
 
     com_code = merge_feed_spec_code(com_code, schema)
-    com_code = merge_compressor_defaults_code(com_code, schema)      # phase14
-    com_code = merge_splitter_fractions_code(com_code, schema)       # phase14
+    com_code = merge_compressor_defaults_code(com_code, schema)
+    com_code = merge_splitter_fractions_code(com_code, schema)
 
     with open(out_com_path, "w", encoding="utf-8") as f:
         f.write(com_code)
@@ -2401,14 +2403,14 @@ def _execute_com_skeleton() -> None:
 # ===========================================================================
 # Phase-aware validation helpers.
 from valid_common import *
-import valid_connectivity as _vconn                              # phase14: Valve / FSplit support (shared 2608 validator has neither)
+import valid_connectivity as _vconn                              # Valve / FSplit support (shared 2608 validator has neither)
 from valid_connectivity import run as run_connectivity
 from valid_feed import run as run_feeds
 import valid_block_specification as vbs
 from valid_block_specification import run as run_block_specs
 from valid_property_schema_repair import validate_property_method_from_schema
 
-# phase14: the shared connectivity validator reports block_type_not_supported for VALVE and FSPLIT, and the block-spec rules have no entry
+# the shared connectivity validator reports block_type_not_supported for VALVE and FSPLIT, and the block-spec rules have no entry
 # for them, so every flowsheet with a valve or a splitter failed Part 2 validation.  Same port rules as Aspen enforces: valve = 1 in / 1 out;
 # splitter = >= 1 in, >= 2 outs (last outlet fraction is left to Aspen).  The shared files are not touched.
 _vconn.PORT_CANDIDATES.setdefault("VALVE", ["F(IN)", "P(OUT)"])
@@ -2437,6 +2439,8 @@ _PHASE14_BLOCK_RULES = {"VALVE": {"engine": "generic", "fields": {}, "rules": []
 
 def _load_block_rules(base_dir: str, rules_filename: str = "valid_block_rules.yaml") -> Dict[str, Any]:
     path = Path(base_dir) / rules_filename
+    if not path.exists():   # shared files may sit in a sub-folder of the data dir (see paths.py)
+        path = shared_file(rules_filename)
     if not path.exists():
         raise FileNotFoundError(f"Block rules YAML not found: {path}")
     rules = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -3378,7 +3382,7 @@ def _phase_results_have_repairs(phase_results: List[Dict[str, Any]]) -> bool:
 
 
 def final_validate_node(state: Part2GraphState) -> Part2GraphState:
-    # 2026-09-02 (Phase C2 extraction): this is cell26's original
+    # this is cell26's original
     # final_validate_node body, with cell30's fix already applied inline --
     # the notebook used to run cell26's version first and then monkeypatch it
     # with this fixed version from a later cell (see cell30's comment history
@@ -3502,7 +3506,7 @@ def human_review_node(state: Part2GraphState, human_answer: Optional[Any] = None
         # Any other PART2_HITL_MODE value (legacy "interactive"): this used to
         # call LangGraph's interrupt() here, but that only works inside a
         # compiled StateGraph -- this function is now called directly from a
-        # plain @tool in the bind_tools()+while-loop agent (Phase 3), where
+        # plain @tool in the bind_tools()+while-loop agent, where
         # interrupt() has nothing to suspend and would just raise. Treat any
         # non-bypass/non-chat mode as bypass instead of crashing.
         print(f"[GRAPH][human_review] unrecognized PART2_HITL_MODE={part2_hitl_mode!r}, treating as bypass")
@@ -3747,12 +3751,12 @@ def build_session(runner_input_path: str = "./runner_input.json", record_event: 
     part2_attempt_dir = part2_run_base_dir / f"attempt_part2_{part2_attempt_stamp}"
 
     default_part2_input = {
-        "db_inp_path": str(_PROJECT_ROOT / "inp_v1.yaml"),
-        "db_com_path": str(_PROJECT_ROOT / "aspen_code_v3.yaml"),
+        "db_inp_path": str(shared_file("inp_v1.yaml")),
+        "db_com_path": str(shared_file("aspen_code_v3.yaml")),
         "component_db_path": str(_PROJECT_ROOT / "aspen_components.yaml"),
         "schema_input_path": str(part2_run_base_dir / "Schema_proto.yaml"),
         "working_dir": str(part2_attempt_dir),
-        "rules_base_dir": str(_PROJECT_ROOT),
+        "rules_base_dir": str(shared_file("valid_block_rules.yaml").parent),
         "out_inp_path": str(part2_attempt_dir / "inp_proto.inp"),
         "out_bkp_path": str(part2_attempt_dir / "inp_proto.bkp"),
         "out_com_skeleton_path": str(part2_attempt_dir / "com_skeleton.py"),

@@ -47,6 +47,7 @@ import time
 import traceback
 from datetime import datetime
 from pathlib import Path
+from paths import data_dir, shared_file
 from typing import Any, Dict, List, Optional
 
 import win32com.client
@@ -72,7 +73,7 @@ ISSUE_START_RE = re.compile(
 
 
 # ---------------------------------------------------------------------------
-# MCP gating (item 2, 2026-09-01): part3_assessment_tool is the only Part3
+# MCP gating: part3_assessment_tool is the only Part3
 # tool that actually gets called (assess_final, below). This mirrors the
 # local_adapter/mcp_client gating that part2_v1.ipynb cell22 does inline in
 # the notebook, but lives here at module level instead -- part3_stage_functions.py
@@ -128,7 +129,7 @@ def mcp_client_tool_call(tool_name: str, arguments: Dict[str, Any], working_dir:
                 cwd=str(_MCP_HERE.parent),
                 env={**os.environ, "PYTHONUNBUFFERED": "1"},
                 text=True,
-                encoding="utf-8",  # 2026-09-01 (item 3 merge verification): without this,
+                encoding="utf-8",  # without this,
                 # subprocess.run() decodes the child's stdout/stderr with
                 # locale.getpreferredencoding() (cp949 on this Korean Windows
                 # setup), which raises UnicodeDecodeError on non-ASCII bytes
@@ -280,7 +281,7 @@ def _export_inp_from_bkp_once(bkp_path: str, output_stem: str) -> None:
 
 
 def _load_aspen_helper_module(project_root: Path, module_name: str):
-    helper_path = project_root / "aspen_code_v1.py"
+    helper_path = shared_file("aspen_code_v1.py")
     if not helper_path.exists():
         raise FileNotFoundError(f"Aspen helper module not found: {helper_path}")
     spec = importlib.util.spec_from_file_location(module_name, str(helper_path))
@@ -504,9 +505,9 @@ def _docs_text(top_docs: List[Dict[str, Any]]) -> str:
 def build_session(runner_input_path: str = "./runner_input.json", record_event=None, token_usage_ctx=None) -> Dict[str, Any]:
     """Equivalent of the old config_contract + config_print stage code."""
     default_part3 = {
-        "working_dir": r"C:\Users\USER\Desktop\3. LLM (2601)\2608 수정",
+        "working_dir": str(data_dir()),
         "aspen_setup_bat": r"C:\Program Files\AspenTech\Aspen Plus V14.0\Engine\Xeq\aspsetup.bat",
-        "bkp_path": r"C:\Users\USER\Desktop\3. LLM (2601)\2608 수정\Aspen_error handling (bkp, his)\Simulation_comp.bkp",
+        "bkp_path": str(data_dir() / "Aspen_error handling (bkp, his)" / "Simulation_comp.bkp"),
         "run_stem": "part3_iter0",
         "max_iter": 3,
         "llm_config": {"model": "gpt-5.2", "temperature": 1},
@@ -855,7 +856,7 @@ def run_patch_plan(session: Dict[str, Any], human_feedback: str = "") -> Dict[st
     docs_text = _docs_text(top_docs)
 
     if session.get("catalog_subset") is None:
-        function_db_path = str(session["project_root"] / "aspen_code_v3.yaml")
+        function_db_path = str(shared_file("aspen_code_v3.yaml"))
         if not Path(function_db_path).exists():
             raise FileNotFoundError(f"Function DB not found: {function_db_path}")
         with open(function_db_path, "r", encoding="utf-8") as f:
@@ -1201,7 +1202,7 @@ def review_with_human(
         # Any other PART3_HITL_MODE value (legacy "interactive"): used to call
         # LangGraph's interrupt() here, but that only works inside a compiled
         # StateGraph -- this is called directly from a plain @tool in the
-        # bind_tools()+while-loop agent (Phase 3) now, where interrupt() has
+        # bind_tools()+while-loop agent now, where interrupt() has
         # nothing to suspend and would just raise. Treat as bypass instead of
         # crashing.
         print(f"[REVIEW] unrecognized PART3_HITL_MODE={hitl_mode!r}, treating as bypass")

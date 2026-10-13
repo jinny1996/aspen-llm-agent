@@ -16,7 +16,7 @@ import os
 
 ENV_FLAG = "PART1_EDC_PROMPT"
 VERSION = "v2"      # v1 asked for "one table row including its column headings"; that produced
-                    # non-contiguous quotes that fail verification (batch 1, case A).  v2 forbids it.
+                    # non-contiguous quotes that fail verification. v2 forbids it.
 _ANCHOR_DRAFT = "\n[User Input]\n{user_input}"
 _ANCHOR_COMPLETION = "\nSTRICT OUTPUT FORMAT:"
 

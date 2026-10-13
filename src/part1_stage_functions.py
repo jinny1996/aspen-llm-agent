@@ -38,6 +38,7 @@ import time
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+from paths import data_dir, shared_file
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
@@ -94,7 +95,7 @@ def mcp_client_tool_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str,
 
     args_file = None
     out_file = None
-    # Same file-based child-trace fix as Part2/Part3 (item 1, 2026-09-01):
+    # Same file-based child-trace fix as Part2/Part3:
     # subprocess.run(capture_output=True) intermittently loses piped stdout
     # under a busy nbconvert-launched Jupyter kernel; a plain file write has
     # no such race. Part1 has not itself observed the failure, but applies
@@ -938,9 +939,9 @@ def spec_has_value(x) -> bool:
     if isinstance(x, dict):
         v = x.get("value")
         if v is None and "value" not in x:
-            # phase14: a MAPPING spec (SPLITTER split_fractions = {out_stream: fraction}, Schema_v5) has no "value" key; it is filled
+            # a MAPPING spec (SPLITTER split_fractions = {out_stream: fraction}, Schema_v5) has no "value" key; it is filled
             # when at least one entry is a number or a provenance dict with a value.  Before this, every block with such a
-            # field failed Part1's required-field check however it was filled (found with the first SPLITTER flowsheet, case F).
+            # field failed Part1's required-field check however it was filled.
             return any((isinstance(e, (int, float)) and not isinstance(e, bool)) or (isinstance(e, dict) and e.get("value") is not None)
                        for e in x.values())
         return v is not None and v != ""
@@ -1355,7 +1356,7 @@ def validate_multi_outlet_product_coverage(schema: Dict[str, Any]) -> List[Dict[
         block_id = _norm_id(src.get("block"))
         role = _norm_port_role(src.get("port_role"))
         stream_id = str(e.get("stream") or "").strip()
-        # phase14: an outlet port that feeds a DOWNSTREAM BLOCK is as present as one that leaves the flowsheet.  Counting only
+        # an outlet port that feeds a DOWNSTREAM BLOCK is as present as one that leaves the flowsheet. Counting only
         # terminal ("product") edges made every intermediate FLASH2 get a duplicate placeholder product stream on the same
         # port, which Aspen rejects ("unavailable action") -- found with case F (SEP-2 -> SPL-1 / V-1).
         if block_id and role and stream_id:
@@ -2079,12 +2080,12 @@ def build_session(runner_input_path: str = "./runner_input.json", record_event: 
 
     default_part1_input = {
         "user_input_text": "ATR 공정을 설계해줘",
-        "paper_text_path": r"C:\Users\USER\Desktop\3. LLM (2601)\2608 수정\jinny_DB\parsed\paper2\paper_h2.md",
-        "paper_image_path": r"C:\Users\USER\Desktop\3. LLM (2601)\2608 수정\jinny_DB\parsed\paper2\Fig. 2.jpg",
+        "paper_text_path": str(data_dir() / "jinny_DB" / "parsed" / "paper2" / "paper_h2.md"),
+        "paper_image_path": str(data_dir() / "jinny_DB" / "parsed" / "paper2" / "Fig. 2.jpg"),
         "paper_image_dir": r"",
-        "paper_image_glob": r"C:\Users\USER\Desktop\3. LLM (2601)\2608 수정\jinny_DB\parsed\paper2\*.jpg",
+        "paper_image_glob": str(data_dir() / "jinny_DB" / "parsed" / "paper2" / "*.jpg"),
         "paper_image_top_k": 4,
-        "schema_layer_path": r"C:\Users\USER\Desktop\3. LLM (2601)\2608 수정\Schema_v5.yaml",
+        "schema_layer_path": str(shared_file("Schema_v5.yaml")),
         "schema_output_path": _run_path("Schema_proto.yaml"),
         "final_schema_path": _run_path("Schema_validated.yaml"),
         "validation_report_path": _run_path("Schema_validation_completion_report_v2.json"),
@@ -2178,7 +2179,7 @@ def build_session(runner_input_path: str = "./runner_input.json", record_event: 
         "part1_attempt_id": part1_attempt_id,
         "part1_run_mode": part1_run_mode,
         "part1_hitl_mode": part1_hitl_mode,
-        # EDC-2c: off by default.  On = the review question is chosen by edc_policy and the reply is applied.
+        # off by default. On = the review question is chosen by edc_policy and the reply is applied.
         "edc_policy": os.environ.get("PART1_EDC_POLICY", "0").strip().lower() in ("1", "true", "on", "yes"),
     }
 
@@ -2661,7 +2662,7 @@ _LEGACY_REVIEW_QUESTION = "{n} low-confidence schema item(s) need your review. A
 
 
 # ---------------------------------------------------------------------------
-# EDC-2c (PART1_EDC_POLICY): policy-chosen questions and replies that really change the schema.
+# (PART1_EDC_POLICY): policy-chosen questions and replies that really change the schema.
 # Everything below is inert unless config["edc_policy"] is true.
 # ---------------------------------------------------------------------------
 def _edc_enabled(session: Dict[str, Any]) -> bool:

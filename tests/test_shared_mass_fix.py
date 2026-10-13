@@ -3,7 +3,9 @@ import importlib.util
 import unittest
 from pathlib import Path
 
-SHARED = Path(__file__).resolve().parent.parent.parent / "2608 수정" / "aspen_code_v1.py"
+from paths import shared_file
+
+SHARED = shared_file("aspen_code_v1.py")
 
 
 def load_shared():

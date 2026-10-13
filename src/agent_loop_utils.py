@@ -1,37 +1,16 @@
-"""Shared tool-calling agent loop, used by all three Part1/2/3 notebooks'
-Phase 3 agent-loop cells instead of LangGraph's create_react_agent.
+"""Tool-calling agent loop shared by the Part1/Part2/Part3 agents.
 
-Extracted because part1_v1.ipynb / part2_v1.ipynb / part3_v1.ipynb each had a
-byte-identical copy of this function (only the call-site max_steps argument
-differed, and every call site already passes it explicitly, so the default
-here is never actually relied on). Behavior unchanged from all three copies.
+A minimal ReAct-style loop (`llm.bind_tools` + while loop) written by hand instead of
+using LangGraph's prebuilt agent: tools must run in the calling thread because the Aspen
+COM document object used by Part2/Part3 is thread-affine.
 
-Phase A (2026-09-02, gradio-chatbot-architecture-plan item A): added
-pause/resume support so a tool can ask for a *real* human answer (for the
-future chat UI) instead of only ever auto-resolving in "bypass" mode. This
-replaces what would otherwise have to be LangGraph's interrupt()+checkpointer
-machinery -- which doesn't apply here since there's no compiled graph to
-interrupt anymore (see part2/part3's now-dead `langgraph.types.interrupt()`
-calls, left over from before the Phase 3 migration and never fixed). Existing
-callers are unaffected as long as their tools never raise
-HumanInputRequired -- which is true for every caller still running in
-"bypass" mode.
-
-Phase B (2026-09-02, item B): Part1/2/3's HITL tools (`request_human_clarification`,
-`review_schema_with_human`, `review_with_human` in Part2/Part3) now raise
-HumanInputRequired when `hitl_mode == "chat"`, replacing Part1's old
-same-as-bypass stub and Part2/Part3's dead `langgraph.types.interrupt()`
-calls left over from before the Phase 3 migration.
-
-Phase F streaming follow-up (2026-09-07, gradio-chatbot-architecture-plan):
-added an optional `on_tool_call` callback so a caller (chat_orchestrator.py)
-can be told about each tool call the moment it's about to run, instead of
-only seeing the whole batch after run_tool_calling_agent/
-resume_tool_calling_agent returns. This is what makes real-time narration in
-the Gradio app possible -- without it, the chat UI sat silent for the whole
-duration of a part (sometimes minutes) and only showed anything once it
-finished or paused. Defaults to None so every existing caller (the
-notebooks, which never pass it) is unaffected.
+Features:
+  * pause/resume for human-in-the-loop: a tool raises `HumanInputRequired`, the loop
+    returns `status="paused"`, and `resume_tool_calling_agent` re-invokes the same tool
+    with the human's answer (convention: such tools accept `human_answer=None`).
+  * `on_tool_call(name, args)` callback fired right before every tool invocation, used
+    by the chat UI to stream progress.
+  * a hard `max_steps` limit.
 """
 from __future__ import annotations
 

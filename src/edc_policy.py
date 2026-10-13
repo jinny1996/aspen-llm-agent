@@ -147,7 +147,7 @@ class PaperContext:
 
 
 # --------------------------------------------------------------------------
-# EDC-2e: checks of the structured evidence the Part1 prompt asks for
+# checks of the structured evidence the Part1 prompt asks for
 # --------------------------------------------------------------------------
 _SCOPE_BORROWED = ("other_config",)
 _SCOPE_SWEPT = ("sweep_range",)
@@ -343,7 +343,7 @@ def classify_entry(entry: Dict[str, Any], ctx: PaperContext, stated_elsewhere: b
             cls = "SWEPT"
         else:
             cls = "ASSUMED"
-    # ---- EDC-2e overlays: only act on the optional fields the 2e prompt asks Part1 to fill ----
+    # ---- overlays: only act on the optional fields the 2e prompt asks Part1 to fill ----
     if src != "user":
         scope = prov.get("quote_scope")
         if cls == "STATED" and scope in _SCOPE_BORROWED:        # self-reported: can only add a question
@@ -452,7 +452,6 @@ def select_questions(classified: Dict[str, Any], k: int = 5) -> Dict[str, Any]:
     asked, overflow = cand[:k], cand[k:]
     # budget fill: when the question cap is not used up, also ask MED values the paper does not support at
     # all (ASSUMED).  They were left silent only to save questions; with budget left that saving is moot
-    # (case B: feed and cooler pressures defaulted to 1.013 bar while the paper's unit runs at ~3 bar).
     if len(asked) < k:
         spare = sorted((r for r in classified["entries"]
                         if r["class"] == "ASSUMED" and r["impact"] == "MED" and r not in cand), key=lambda r: r["id"])
@@ -493,7 +492,7 @@ def format_question(selected: Dict[str, Any], will_apply: bool = False) -> str:
 
 
 # --------------------------------------------------------------------------
-# EDC-2c: apply the user's reply to the schema (used when PART1_EDC_POLICY is on)
+# apply the user's reply to the schema (used when PART1_EDC_POLICY is on)
 # --------------------------------------------------------------------------
 _ID_PATTERN = r"[A-Za-z][A-Za-z0-9_]*\.[A-Za-z0-9_]+(?:\[[^\]\s;,]+\])?"
 _ASSIGN_RE = re.compile(rf"({_ID_PATTERN})\s*=\s*(-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)")

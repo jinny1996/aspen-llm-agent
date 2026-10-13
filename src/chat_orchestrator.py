@@ -52,8 +52,10 @@ for _path in [_HERE, _HERE.parent]:
 # future Gradio process) instead of depending on which launcher happened to
 # populate the environment correctly.
 from dotenv import load_dotenv
+from paths import data_dir, shared_file
 
-load_dotenv(_HERE.parent.parent / ".env", override=True)
+for _env in (data_dir().parent / ".env", _HERE.parent / ".env"):   # next to the shared data dir (dev layout), then repo root
+    load_dotenv(_env, override=True)
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage
@@ -65,10 +67,8 @@ import part1_stage_functions as p1
 import part2_stage_functions as p2
 import part3_stage_functions as p3
 
-# 2608 수정 holds the shared data (jinny_DB, Schema_v5.yaml, aspen_code_v3.yaml,
-# ...) that every phaseN folder under 2609 수정 reads from without copying --
-# see [[project-folder-layout]]. Same BASE_DIR runner_v1.ipynb uses.
-BASE_DIR = Path(r"C:\Users\USER\Desktop\3. LLM (2601)\2608 수정")
+# Shared data (parsed papers, Schema_v5.yaml, aspen_code_v3.yaml, ...) -- see paths.py.
+BASE_DIR = data_dir()
 
 
 # ===========================================================================
@@ -628,7 +628,7 @@ def _format_narration_block(lines: List[str]) -> str:
     return "\n".join(f"· {line}" for line in lines) + "\n\n"
 
 
-# A callback a live UI (Phase F's app.py) passes into
+# A callback a live UI passes into
 # PipelineSession.handle_user_message() to receive one friendly narration
 # line at a time, as it happens, instead of only all-at-once when the whole
 # call returns. Called synchronously on whatever thread is running the
@@ -667,7 +667,7 @@ class PipelineSession:
         base_dir: Path = BASE_DIR,
         paper_id: str = "paper2",
         process_type: str = "ATR",
-        mcp_adapter_mode: str = "local_adapter",
+        mcp_adapter_mode: str = os.environ.get("MCP_ADAPTER_MODE", "local_adapter"),
         model: str = "gpt-5.5",
         paper_text_path: Optional[Path] = None,
         paper_image_path: Optional[Path] = None,
@@ -716,7 +716,7 @@ class PipelineSession:
             "paper_image_glob": paper_image_glob if paper_image_glob
             else str(self.base_dir / "jinny_DB" / "parsed" / paper_id / "*.jpg"),
             "paper_image_top_k": paper_image_top_k,
-            "schema_layer_path": str(self.base_dir / "Schema_v5.yaml"),
+            "schema_layer_path": str(shared_file("Schema_v5.yaml")),
             "working_dir": str(self.part1_dir),
             "schema_output_path": str(self.part1_dir / "Schema_proto.yaml"),
             "final_schema_path": str(self.part1_dir / "Schema_validated.yaml"),
@@ -727,8 +727,8 @@ class PipelineSession:
         }
         self.part2_input: Dict[str, Any] = {
             "run_mode": "full",
-            "db_inp_path": str(self.base_dir / "inp_v1.yaml"),
-            "db_com_path": str(self.base_dir / "aspen_code_v3.yaml"),
+            "db_inp_path": str(shared_file("inp_v1.yaml")),
+            "db_com_path": str(shared_file("aspen_code_v3.yaml")),
             "component_db_path": str(self.base_dir / "aspen_components.yaml"),
             "schema_input_path": "",  # filled in from part1's output
             "working_dir": str(self.part2_dir),

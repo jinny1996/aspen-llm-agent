@@ -136,7 +136,7 @@ def _provenance(node: Any) -> Dict[str, Any]:
         "has_rationale": bool(node.get("rationale")),
         "value": node.get("value"),
     }
-    # EDC-2e optional fields (PART1_EDC_PROMPT): carried through untouched, judged in edc_policy
+    # optional fields (PART1_EDC_PROMPT): carried through untouched, judged in edc_policy
     for k in ("quote_scope", "alternatives", "derivation"):
         if node.get(k):
             prov[k] = node[k]
@@ -313,7 +313,7 @@ def _eval_feeds(schema: Dict[str, Any]) -> List[Dict[str, Any]]:
         else:
             total = sum(float(v) for v in z.values() if isinstance(v, (int, float)))
             ok = abs(total - 1.0) <= 0.001      # tolerance from valid_feed_rules.yaml
-            # `z_provenance` (EDC-2e) is a sibling key so the fractions dict itself stays as Part2 expects
+            # `z_provenance` is a sibling key so the fractions dict itself stays as Part2 expects
             zp = sp.get("z_provenance")
             node = {**zp, "value": z} if isinstance(zp, dict) else z
             out.append(_entry(str(sid), "z", PROVIDED, node,

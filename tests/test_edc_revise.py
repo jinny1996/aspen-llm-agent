@@ -1,5 +1,6 @@
 """EDC-2c: the reply to the schema-review question is applied to the schema (flag PART1_EDC_POLICY).
 Policy agreed with the user: out-of-range / impossible values only WARN, the number is used."""
+from paths import SRC_DIR, papers_dir
 import copy
 import json
 import tempfile
@@ -14,8 +15,8 @@ from agent_loop_utils import HumanInputRequired
 from test_edc_policy import PAPER, V, rgibbs, schema
 
 HERE = Path(__file__).resolve().parent
-REAL_RUN = HERE / "run" / "attempt_chat_20261006_220801" / "part1"
-PAPER3 = HERE.parent.parent / "jinny_DB" / "parsed" / "paper3" / "paper3.md"
+REAL_RUN = SRC_DIR / "run" / "attempt_chat_20261006_220801" / "part1"
+PAPER3 = papers_dir() / "paper3" / "paper3.md"
 
 RANGE_Q = "the temperature was varied between 100 and 1000 °C as the independent variable"
 APPLIED_TEXT = "스키마에 그대로 반영"      # "reflected in the schema as is"
